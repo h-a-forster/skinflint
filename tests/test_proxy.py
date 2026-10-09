@@ -7,6 +7,7 @@ import gzip
 import json
 import logging
 import socket
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -815,6 +816,11 @@ def test_embedded_runs_and_shuts_down(tmp_path):
     assert not any(t.name == "skinflint-proxy" for t in threading.enumerate())
     assert not any(t.name.startswith("skinflint-db") for t in threading.enumerate())
     with socket.socket() as s:
+        # The listener is gone. On POSIX, closed connections linger in TIME_WAIT, which
+        # SO_REUSEADDR ignores but a live listener still blocks. On Windows the flag would
+        # allow binding over a live listener, so leave it off there.
+        if sys.platform != "win32":
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("127.0.0.1", port))
     with Store(cfg.db_path) as store:
         (rec,) = store.records()
