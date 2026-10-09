@@ -43,10 +43,12 @@ never stored or logged.
 ## Quick start
 
 ```sh
-uv tool install skinflint      # or: pipx install skinflint
-skinflint init                 # writes ~/.skinflint/config.toml: $20/day, $5/session
+uv tool install git+https://github.com/h-a-forster/skinflint
+skinflint init     # writes ~/.skinflint/config.toml: $20/day, $5/session
 skinflint serve
 ```
+
+With pipx: `pipx install git+https://github.com/h-a-forster/skinflint`.
 
 In another shell:
 
