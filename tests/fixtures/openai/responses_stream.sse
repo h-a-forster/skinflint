@@ -1,0 +1,18 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_fx003","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"in_progress","usage":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_fx003","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"in_progress","usage":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"msg_fx","type":"message","status":"in_progress","content":[],"role":"assistant"}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":3,"item_id":"msg_fx","output_index":0,"content_index":0,"delta":"Hi \"usage\""}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":4,"item_id":"msg_fx","output_index":0,"content_index":0,"text":"Hi"}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":5,"response":{"id":"resp_fx003","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"completed","usage":{"input_tokens":12000,"input_tokens_details":{"cached_tokens":8000,"cache_write_tokens":3000},"output_tokens":400,"output_tokens_details":{"reasoning_tokens":250},"total_tokens":12400}}}
+

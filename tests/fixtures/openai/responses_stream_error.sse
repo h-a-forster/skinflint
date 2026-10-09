@@ -1,0 +1,6 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_fx004","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"in_progress","usage":null}}
+
+event: error
+data: {"type":"error","code":"server_error","message":"Something went wrong","param":null,"sequence_number":1}
+

@@ -1,0 +1,12 @@
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{"content":"Hello"},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{"content":" \"usage\": {} caf\u00e9 ☕"},"logprobs":null,"finish_reason":null}],"usage":null}
+
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}],"usage":null}
+
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[],"usage":{"prompt_tokens":2100,"completion_tokens":57,"total_tokens":2157,"prompt_tokens_details":{"cached_tokens":1536,"cache_write_tokens":256,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":32,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0}}}
+
+data: [DONE]
+

@@ -1,0 +1,6 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_fx005","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"in_progress","usage":null}}
+
+event: response.failed
+data: {"type":"response.failed","sequence_number":1,"response":{"id":"resp_fx005","object":"response","created_at":1760000002,"model":"gpt-5.6-codex","service_tier":"priority","output":[],"status":"failed","error":{"code":"server_error","message":"The model failed"},"usage":{"input_tokens":900,"input_tokens_details":{"cached_tokens":0},"output_tokens":3,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":903}}}
+

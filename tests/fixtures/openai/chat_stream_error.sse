@@ -1,0 +1,6 @@
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+data: {"id":"chatcmpl-fx001","object":"chat.completion.chunk","created":1760000000,"model":"gpt-5.5-2026-08-01","service_tier":"default","system_fingerprint":"fp_fx01","choices":[{"index":0,"delta":{"content":"Hel"},"logprobs":null,"finish_reason":null}]}
+
+data: {"error":{"message":"The server had an error while processing your request.","type":"server_error","param":null,"code":null}}
+
