@@ -44,7 +44,8 @@ port = 4100
 [limits]
 # How much to hold against budgets while a request is in flight:
 #   "estimate"   - estimated prompt cost only (default; may overshoot by in-flight output)
-#   "worst_case" - prompt plus max output tokens at full price (never overshoots)
+#   "worst_case" - the most the request body allows: prompt and max output at the dearest
+#                  rates (see docs/configuration.md for what it cannot bound)
 reserve = "estimate"
 
 # A shared daily cap across everything that goes through the proxy.

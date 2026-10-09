@@ -7,13 +7,17 @@
 A local proxy for the Anthropic and OpenAI APIs. It puts hard spend caps on coding agents,
 shows where every prompt token goes, and explains each prompt-cache miss.
 
-Point Claude Code, Codex or any SDK at `http://127.0.0.1:4100`. Requests pass through
-unchanged. Each one is checked against your budgets first and recorded after.
+Point Claude Code, Codex or any SDK at `http://127.0.0.1:4100`. Requests are forwarded
+as sent, apart from two optional additions that make metering work
+([details](docs/how-it-works.md#forwarding)). Each one is checked against your budgets first
+and recorded after.
 
 ## Why
 
-- **Agents spend unattended.** Provider spend limits are per organisation and per month.
-  Nothing stops one runaway session or one CI job at $5.
+- **Agents spend unattended.** Provider limits are monthly, per organisation or workspace
+  (Anthropic) or per project (OpenAI). `claude -p --max-budget-usd` caps one run and proxies
+  like LiteLLM cap per key, but each needs setup per run or key. skinflint caps every Claude
+  Code and Codex session by the session ids they already send. No keys; it runs locally.
 - **Most of the prompt is not your prompt.** Claude Code 2.1.287 sent 43,325 tokens to
   answer `Reply with exactly: hi`. 76% were definitions of 39 tools; none was called. With
   six tools the same request was 13,884 tokens. See [results](docs/results.md).
@@ -166,8 +170,10 @@ All data commands take `--json`.
 
 - Only traffic through the proxy is capped. Keep a provider-side spend limit as a backstop.
 - With the default `reserve = "estimate"`, requests already in flight when a cap is reached
-  can finish, so spend can overshoot by their output. `reserve = "worst_case"` never
-  overshoots and refuses earlier. See [reservations](docs/configuration.md#reservations).
+  can finish, so spend can overshoot by their output: up to $0.64 per in-flight Claude Code
+  request on Claude Opus 5.5 ($1.28 in fast mode). `reserve = "worst_case"` reserves the most
+  each request body allows and refuses earlier; server-side tool input is the one thing it
+  cannot bound. See [reservations](docs/configuration.md#reservations).
 - Costs come from a price table dated in [`prices.toml`](src/skinflint/data/prices.toml).
   Unknown models are priced at the provider's flagship rate and marked estimated.
 - Token attribution within a prompt is an estimate scaled to the exact total.
