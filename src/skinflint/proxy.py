@@ -76,6 +76,8 @@ class Proxy:
         self.pricing = pricing
         self.budget = budget
         self.db = ThreadPoolExecutor(max_workers=1, thread_name_prefix="skinflint-db")
+        # Request segmentation runs alongside the upstream call, off the critical path.
+        self.cpu = ThreadPoolExecutor(max_workers=2, thread_name_prefix="skinflint-profile")
         self.http: aiohttp.ClientSession | None = None
         self.diagnostics = cfg.cache_diagnostics
         self.last_message: OrderedDict[tuple[str, str | None], str] = OrderedDict()
@@ -97,6 +99,7 @@ class Proxy:
         ledger queue so the owner can close the store."""
         if self.http is not None:
             await self.http.close()
+        await asyncio.to_thread(self.cpu.shutdown, True)
         await asyncio.to_thread(self.db.shutdown, True)
 
     def app(self) -> web.Application:
@@ -109,6 +112,15 @@ class Proxy:
 
     async def run_db(self, fn: Callable[..., T], *args: Any) -> T:
         return await asyncio.get_running_loop().run_in_executor(self.db, fn, *args)
+
+    def profile(self, provider: Provider, endpoint: Endpoint, data: dict[str, Any]) -> Future:
+        """Segment the request body in the background; the future yields its segments."""
+        try:
+            return self.cpu.submit(segments.segment, provider, endpoint, data)
+        except RuntimeError:  # shutting down
+            future: Future = Future()
+            future.set_result(None)
+            return future
 
     def submit(self, fn: Callable[..., Any], *args: Any) -> None:
         """Queue a ledger write without waiting for it; failures are logged, never raised."""
@@ -213,7 +225,7 @@ class Proxy:
         provider = adapter.provider
         started = time.time()
         try:
-            data, info, segs, fp = await asyncio.to_thread(prepare, adapter, endpoint, raw)
+            data, info, fp = await asyncio.to_thread(prepare, adapter, endpoint, raw)
         except Exception as e:  # noqa: BLE001 - unparseable bodies go upstream untouched
             log.warning("could not parse %s request body (%s); forwarding unmetered", path, e)
             return await self.passthrough(request, provider, target, raw)
@@ -253,7 +265,12 @@ class Proxy:
         assert decision.record_id is not None
 
         call = Call(
-            self, request, record, decision.record_id, segs, raw if self.cfg.store_bodies else None
+            self,
+            request,
+            record,
+            decision.record_id,
+            self.profile(provider, endpoint, data),
+            raw if self.cfg.store_bodies else None,
         )
         conversation = (session, agent) if session else None
         try:
@@ -382,7 +399,7 @@ class Call:
         request: web.Request,
         record: Record,
         record_id: int,
-        segs: list[Segment],
+        segs: Future,
         body: bytes | None,
     ) -> None:
         self.proxy = proxy
@@ -518,14 +535,26 @@ class Call:
         except Exception as e:  # noqa: BLE001
             rec.cost_usd, rec.cost_estimated = 0.0, True
             log.warning("could not price %s: %s", rec.model, e)
-        if rec.usage.prompt_tokens:
-            segments.calibrate(self.segs, rec.usage.prompt_tokens)
         rec.reserved_usd = 0.0
         rec.reserved_tokens = 0
         if state is State.OK and rec.session:
             proxy.remember((rec.session, rec.agent), upstream_id)
-        proxy.submit(proxy.store.finish, self.record_id, rec, self.segs, self.body)
+        self.segs.add_done_callback(self.write)
         log_record(rec)
+
+    def write(self, future: Future) -> None:
+        """Queue the ledger update once segmentation is done (runs on whichever thread
+        completes the future)."""
+        rec = self.record
+        segs: list[Segment] | None
+        try:
+            segs = future.result()
+            if segs is not None and rec.usage.prompt_tokens:
+                segments.calibrate(segs, rec.usage.prompt_tokens)
+        except Exception as e:  # noqa: BLE001 - a profile is optional; the ledger row is not
+            log.warning("could not profile request %s: %s", self.record_id, e)
+            segs = None
+        self.proxy.submit(self.proxy.store.finish, self.record_id, rec, segs, self.body)
 
 
 # -- helpers -------------------------------------------------------------------------------
@@ -533,14 +562,28 @@ class Call:
 
 def prepare(
     adapter: Adapter, endpoint: Endpoint, raw: bytes
-) -> tuple[dict[str, Any], RequestInfo, list[Segment], str]:
-    """Parse and profile a metered request body (CPU-bound; runs off the event loop)."""
+) -> tuple[dict[str, Any], RequestInfo, str]:
+    """Parse a metered request body and fingerprint its agent (CPU-bound; off the loop)."""
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("body is not a JSON object")
     info = adapter.parse_request(endpoint, data)
-    segs = segments.segment(adapter.provider, endpoint, data)
-    return data, info, segs, segments.fingerprint(segs)
+    head = segments.segment(adapter.provider, endpoint, agent_head(endpoint, data))
+    return data, info, segments.fingerprint(head)
+
+
+def agent_head(endpoint: Endpoint, data: dict[str, Any]) -> dict[str, Any]:
+    """The parts of a body that identify the agent (tools, system prompt), without the
+    conversation, so fingerprinting stays cheap however long the session gets."""
+    if endpoint is Endpoint.CHAT:
+        messages = data.get("messages")
+        system = [
+            m
+            for m in (messages if isinstance(messages, list) else [])
+            if isinstance(m, dict) and m.get("role") in ("system", "developer")
+        ]
+        return {**data, "messages": system}
+    return {k: v for k, v in data.items() if k not in ("messages", "input")}
 
 
 def encode(body: dict[str, Any]) -> bytes:

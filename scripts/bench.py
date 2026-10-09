@@ -161,7 +161,8 @@ def main() -> None:
     ]
     rows = []
     procs: list[subprocess.Popen] = []
-    with tempfile.TemporaryDirectory() as tmp:
+    # Windows may hold the ledger open briefly after the proxy process exits.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         try:
             base = servers(tmp, "latency", 0.0, procs)
             for label, payload in cases:
