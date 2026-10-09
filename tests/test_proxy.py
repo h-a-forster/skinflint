@@ -828,3 +828,46 @@ async def test_responses_failed_event_marks_row(h):
     (rec,) = await h.records()
     assert rec.state is State.ERROR and rec.endpoint is Endpoint.RESPONSES
     assert rec.usage.cache_read == 2048
+
+
+async def test_stream_without_content_type_is_metered_as_stream(h):
+    # Codex's ChatGPT backend streams server-sent events with no Content-Type header.
+    h.fake.reply(Reply(chunks=responses_events(), content_type=""))
+    resp = await h.post(
+        "/responses",
+        {"model": "gpt-5.5", "input": "hi", "stream": True},
+        headers={"session-id": "codex-session-1"},
+    )
+    assert await resp.read() == b"".join(responses_events())
+    (rec,) = await h.records()
+    assert rec.state is State.OK
+    assert rec.usage.cache_read == 2048
+    assert rec.session == "codex-session-1"
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_client_disconnect_after_terminal_event_is_ok(make, cancel):
+    # Codex closes the connection as soon as it has response.completed.
+    h = await make(handler_cancellation=cancel)
+    h.fake.reply(stream(responses_events() + [b": keep-alive\n\n"] * 50, delay=0.02))
+    resp = await h.post("/responses", {"model": "gpt-5.5", "input": "hi", "stream": True})
+    seen = b""
+    while b"response.completed" not in seen or not seen.endswith(b"\n\n"):
+        seen += await resp.content.readany()
+    resp.close()
+    await wait_for(lambda: h.fake.disconnects == 1 and h.fake.active == 0)
+    (rec,) = await h.records()
+    assert rec.state is State.OK and rec.error is None
+    assert rec.usage.cache_read == 2048
+
+
+async def test_chatgpt_account_marks_plan_traffic(h):
+    h.fake.reply(stream(responses_events()))
+    resp = await h.post(
+        "/responses",
+        {"model": "gpt-5.5", "input": "hi", "stream": True},
+        headers={"chatgpt-account-id": "acct"},
+    )
+    await resp.read()
+    (rec,) = await h.records()
+    assert rec.plan is True

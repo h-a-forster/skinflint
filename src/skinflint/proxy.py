@@ -232,7 +232,7 @@ class Proxy:
             agent=agent,
             client=client_name(headers.get("user-agent")),
             stream=info.stream,
-            plan="oauth-" in headers.get("anthropic-beta", ""),
+            plan=is_plan_traffic(headers),
             request_class=headers.get("x-claude-code-request-class"),
         )
         try:
@@ -303,7 +303,7 @@ class Proxy:
                     self.submit(self.store.save_ratelimit, provider, limits, time.time())
                 if upstream.status >= 300:
                     return call.relay_bytes(upstream, await upstream.read())
-                if is_event_stream(upstream):
+                if is_event_stream(upstream, info.stream):
                     return await call.relay_stream(
                         upstream, adapter.stream_tracker(endpoint, injected_usage)
                     )
@@ -443,11 +443,20 @@ class Call:
                     await to_client(resp.write(tail))
             await to_client(resp.write_eof())
         except ClientGone:
-            state, error = State.ABORTED, "client disconnected"
+            # Clients may hang up once they have the terminal event (Codex does): that is a
+            # complete response, not an abort.
+            if not (metering and tracker.finished):
+                state, error = State.ABORTED, "client disconnected"
             upstream.close()
         except asyncio.CancelledError:
             upstream.close()
-            self.settle_from(tracker, State.ABORTED, upstream.status, "cancelled")
+            finished = metering and tracker.finished
+            self.settle_from(
+                tracker,
+                State.OK if finished else State.ABORTED,
+                upstream.status,
+                None if finished else "cancelled",
+            )
             raise
         except UPSTREAM_ERRORS as e:
             state, error = State.ERROR, f"upstream stream failed: {e!r}"
@@ -589,8 +598,17 @@ def response_headers(upstream: aiohttp.ClientResponse) -> CIMultiDict[str]:
     return out
 
 
-def is_event_stream(upstream: aiohttp.ClientResponse) -> bool:
-    return upstream.headers.get("content-type", "").startswith("text/event-stream")
+def is_plan_traffic(headers: Mapping[str, str]) -> bool:
+    """Subscription logins: Claude (OAuth beta flag) or ChatGPT (Codex account header)."""
+    return "oauth-" in headers.get("anthropic-beta", "") or "chatgpt-account-id" in headers
+
+
+def is_event_stream(upstream: aiohttp.ClientResponse, requested: bool) -> bool:
+    """SSE by content type; without one, trust the request (Codex's ChatGPT backend sends none)."""
+    content_type = upstream.headers.get("content-type", "").lower()
+    if content_type:
+        return content_type.startswith("text/event-stream")
+    return requested
 
 
 def plain_error(status: int, message: str) -> web.Response:

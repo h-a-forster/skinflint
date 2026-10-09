@@ -34,7 +34,7 @@ _RESPONSE_EVENTS = frozenset(
     }
 )
 _TERMINAL = frozenset({"response.completed", "response.failed", "response.incomplete"})
-_SESSION_HEADERS = ("session_id", "x-session-id")
+_SESSION_HEADERS = ("session-id", "session_id", "x-session-id")  # Codex sends session-id
 
 
 def openai_usage(usage: Any, service_tier: str | None = None) -> Usage:
@@ -285,4 +285,8 @@ class OpenAIAdapter:
         return 429, headers, json.dumps(body).encode()
 
     def ratelimit_headers(self, headers: Mapping[str, str]) -> dict[str, str]:
-        return headers_with_prefix(headers, "x-ratelimit-")
+        # x-codex-*: ChatGPT plan usage reported to Codex (primary/secondary windows).
+        return {
+            **headers_with_prefix(headers, "x-ratelimit-"),
+            **headers_with_prefix(headers, "x-codex-"),
+        }
