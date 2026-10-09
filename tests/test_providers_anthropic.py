@@ -107,6 +107,40 @@ def test_parse_request_counts_images_as_fixed_size():
     assert adapter.parse_request(Endpoint.MESSAGES, body).est_prompt_tokens < 5000
 
 
+@pytest.mark.parametrize(
+    ("name", "real"),
+    [("first_turn", 57845), ("tool_turn", 58217), ("side_request", 4604)],
+)
+def test_parse_request_worst_case_bound_covers_real_prompt(name, real):
+    body = json.loads((CC / f"{name}.request.json").read_text(encoding="utf-8"))
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert info.est_prompt_tokens < real  # the plain estimate runs ~7% low here
+    # The bound leaves room for a tokenizer ~35% hungrier than Haiku 4.5's.
+    assert info.max_prompt_tokens > 1.35 * real
+
+
+def test_parse_request_worst_case_hints():
+    body = {
+        "model": "claude-opus-5-5",
+        "max_tokens": 10,
+        "speed": "fast",
+        "inference_geo": "us",
+        "service_tier": "auto",
+        "tools": [
+            {"type": "web_search_20260209", "name": "web_search", "max_uses": 4},
+            {"type": "web_search_20250305", "name": "web_search_old", "max_uses": 2},
+            {"name": "Bash", "input_schema": {}},
+        ],
+        "messages": [],
+    }
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert (info.speed, info.inference_geo, info.service_tier) == ("fast", "us", "auto")
+    assert info.web_searches == 6
+    body["tools"].append({"type": "web_search_20260209", "name": "uncapped"})
+    assert adapter.parse_request(Endpoint.MESSAGES, body).web_searches is None
+    assert adapter.parse_request(Endpoint.MESSAGES, {"model": "m"}).web_searches == 0
+
+
 def test_parse_request_malformed_body():
     info = adapter.parse_request(Endpoint.MESSAGES, {"model": 5, "max_tokens": "x"})
     assert info.model == "" and info.max_output_tokens is None and info.stream is False

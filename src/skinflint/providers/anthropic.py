@@ -14,16 +14,21 @@ from skinflint.providers.base import (
     as_dict,
     as_int,
     as_str,
+    bound_tokens,
     error_message,
     estimate_tokens,
     header,
     headers_with_prefix,
     load_json,
+    web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
 
 _LEGACY_SESSION = re.compile(r"_session_([0-9A-Za-z-]{8,64})$")
-_STREAM_EVENTS = frozenset({"message_start", "message_delta", "message_stop", "error"})
+_STREAM_EVENTS = frozenset(
+    {"message_start", "content_block_delta", "message_delta", "message_stop", "error"}
+)
+_DELTA_TEXT = ("text", "thinking", "partial_json")  # content_block_delta fields that are output
 _COUNTS = (
     "input_tokens",
     "cache_creation_input_tokens",
@@ -108,6 +113,7 @@ class AnthropicStreamTracker:
         self._parser = SSEParser()
         self._acc = UsageAccumulator()
         self.usage = Usage()
+        self.streamed_chars = 0
         self.model: str | None = None
         self.upstream_id: str | None = None
         self.finished = False
@@ -139,7 +145,13 @@ class AnthropicStreamTracker:
         if not isinstance(obj, dict):
             return
         kind = obj.get("type") if ev.event is None else ev.event
-        if kind == "message_start":
+        if kind == "content_block_delta":
+            delta = as_dict(obj.get("delta"))
+            for key in _DELTA_TEXT:
+                text = delta.get(key)
+                if isinstance(text, str):
+                    self.streamed_chars += len(text)
+        elif kind == "message_start":
             msg = as_dict(obj.get("message"))
             self.model = as_str(msg.get("model")) or self.model
             self.upstream_id = as_str(msg.get("id")) or self.upstream_id
@@ -176,16 +188,20 @@ class AnthropicAdapter:
 
     def parse_request(self, endpoint: Endpoint, body: dict) -> RequestInfo:
         body = as_dict(body)
+        prompt = (body.get("tools"), body.get("system"), body.get("messages"))
         return RequestInfo(
             provider=self.provider,
             endpoint=endpoint,
             model=as_str(body.get("model")) or "",
             stream=body.get("stream") is True,
             max_output_tokens=as_int(body.get("max_tokens")),
-            est_prompt_tokens=estimate_tokens(
-                body.get("tools"), body.get("system"), body.get("messages")
-            ),
+            est_prompt_tokens=estimate_tokens(*prompt),
             session_hint=_metadata_session(body),
+            max_prompt_tokens=bound_tokens(*prompt),
+            speed=as_str(body.get("speed")),
+            service_tier=as_str(body.get("service_tier")),
+            inference_geo=as_str(body.get("inference_geo")),
+            web_searches=web_search_cap(body.get("tools"), ("web_search",)),
         )
 
     def rewrite_request(

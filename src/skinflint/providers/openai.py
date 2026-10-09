@@ -13,11 +13,13 @@ from skinflint.providers.base import (
     as_dict,
     as_int,
     as_str,
+    bound_tokens,
     error_message,
     estimate_tokens,
     header,
     headers_with_prefix,
     load_json,
+    web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
 
@@ -33,6 +35,7 @@ _RESPONSE_EVENTS = frozenset(
         "error",
     }
 )
+_CHAT_DELTA_TEXT = ("content", "reasoning_content", "refusal")
 _TERMINAL = frozenset({"response.completed", "response.failed", "response.incomplete"})
 _SESSION_HEADERS = ("session-id", "session_id", "x-session-id")  # Codex sends session-id
 
@@ -69,6 +72,7 @@ class _Tracker:
     def __init__(self) -> None:
         self._parser = SSEParser()
         self.usage = Usage()
+        self.streamed_chars = 0
         self.model: str | None = None
         self.upstream_id: str | None = None
         self.finished = False
@@ -124,15 +128,16 @@ class ChatStreamTracker(_Tracker):
             if data.strip() == "[DONE]":
                 self.finished = True
                 return False
+            obj = load_json(data)
+            if not isinstance(obj, dict):
+                return False
+            self._count(obj.get("choices"))
             wanted = (
                 self.model is None
                 or ('"usage"' in data and not _USAGE_NULL.search(data))
                 or '"error"' in data
             )
             if not wanted:
-                return False
-            obj = load_json(data)
-            if not isinstance(obj, dict):
                 return False
             if obj.get("error"):
                 self.error = error_message(obj["error"])
@@ -146,6 +151,20 @@ class ChatStreamTracker(_Tracker):
         except Exception:
             pass
         return False
+
+    def _count(self, choices: Any) -> None:
+        """Add the generated content in one chunk's choice deltas to streamed_chars."""
+        for choice in choices if isinstance(choices, list) else []:
+            delta = as_dict(as_dict(choice).get("delta"))
+            for key in _CHAT_DELTA_TEXT:
+                text = delta.get(key)
+                if isinstance(text, str):
+                    self.streamed_chars += len(text)
+            calls = delta.get("tool_calls")
+            for call in calls if isinstance(calls, list) else []:
+                args = as_dict(as_dict(call).get("function")).get("arguments")
+                if isinstance(args, str):
+                    self.streamed_chars += len(args)
 
 
 class ResponsesStreamTracker(_Tracker):
@@ -169,12 +188,21 @@ class ResponsesStreamTracker(_Tracker):
         return b""
 
     def _handle(self, ev: SSEEvent) -> None:
-        if (ev.event is not None and ev.event not in _RESPONSE_EVENTS) or not ev.data:
+        if not ev.data:
+            return
+        is_delta = ev.event is not None and ev.event.endswith(".delta")
+        if ev.event is not None and ev.event not in _RESPONSE_EVENTS and not is_delta:
             return
         obj = load_json(ev.data)
         if not isinstance(obj, dict):
             return
         kind = as_str(obj.get("type")) or ev.event
+        if kind is not None and kind.endswith(".delta"):
+            # output_text, reasoning_text, reasoning_summary_text, function_call_arguments...
+            delta = obj.get("delta")
+            if isinstance(delta, str):
+                self.streamed_chars += len(delta)
+            return
         if kind == "error":
             self.error = error_message(obj.get("error") if "error" in obj else obj)
             return
@@ -211,17 +239,22 @@ class OpenAIAdapter:
             max_out = as_int(body.get("max_completion_tokens"))
             if max_out is None:
                 max_out = as_int(body.get("max_tokens"))
-            est = estimate_tokens(body.get("tools"), body.get("functions"), body.get("messages"))
+            prompt = (body.get("tools"), body.get("functions"), body.get("messages"))
         else:
             max_out = as_int(body.get("max_output_tokens"))
-            est = estimate_tokens(body.get("tools"), body.get("instructions"), body.get("input"))
+            prompt = (body.get("tools"), body.get("instructions"), body.get("input"))
         return RequestInfo(
             provider=self.provider,
             endpoint=endpoint,
             model=as_str(body.get("model")) or "",
             stream=body.get("stream") is True,
             max_output_tokens=max_out,
-            est_prompt_tokens=est,
+            est_prompt_tokens=estimate_tokens(*prompt),
+            max_prompt_tokens=bound_tokens(*prompt),
+            service_tier=as_str(body.get("service_tier")),
+            web_searches=web_search_cap(body.get("tools"), ("web_search",)),
+            previous_response_id=as_str(body.get("previous_response_id")),
+            server_context=body.get("conversation") is not None,
         )
 
     def rewrite_request(

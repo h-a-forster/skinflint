@@ -161,23 +161,58 @@ class Pricing:
         return mult
 
     def max_cost(
-        self, provider: Provider, model: str, prompt_tokens: int, output_tokens: int
+        self,
+        provider: Provider,
+        model: str,
+        prompt_tokens: int,
+        output_tokens: int,
+        *,
+        speed: str | None = None,
+        service_tier: str | None = None,
+        inference_geo: str | None = None,
+        web_searches: int = 0,
     ) -> float:
-        """Upper bound for a request of this size at standard speed and tier."""
-        price, _ = self.lookup(provider, model)
+        """Upper bound for a request of this size.
+
+        Every input token is priced at the highest input-side rate (uncached, 5m or 1h cache
+        write). ``speed``, ``service_tier`` and ``inference_geo`` are the request's own
+        settings: a value the request leaves unset (or ``"auto"``) is priced at the dearest
+        option, since an account or project default can select it. ``web_searches`` is the
+        most server-side searches the request allows.
+        """
+        model_id, price, _ = self._resolve(provider, model)
         if price is None:
             return 0.0
-        tier = price
+        tiers = [price]
         if price.long is not None and prompt_tokens > (price.long_context_threshold or 0):
-            tier = price.long
-        in_rate = max(tier.input, tier.cache_write_5m, tier.cache_write_1h)
-        return (prompt_tokens * in_rate + output_tokens * tier.output) / 1_000_000
+            tiers = [price.long]
+        if speed == "fast" and price.fast is not None:
+            tiers.append(price.fast)
+        in_rate = max(max(t.input, t.cache_write_5m, t.cache_write_1h) for t in tiers)
+        out_rate = max(t.output for t in tiers)
+        usd = (prompt_tokens * in_rate + output_tokens * out_rate) / 1_000_000
+        pd = self._p[provider]
+        usd *= _worst(service_tier, {**pd.service_tier, **pd.model_tiers.get(model_id or "", {})})
+        usd *= _worst(inference_geo, pd.inference_geo)
+        return usd + max(web_searches, 0) * price.web_search_per_1k / 1000
 
     def models(self) -> list[tuple[Provider, str, Price]]:
         return [(p, m, price) for p, pd in self._p.items() for m, price in pd.models.items()]
 
     def aliases(self, provider: Provider) -> dict[str, str]:
         return dict(self._p[provider].aliases)
+
+
+_STANDARD = frozenset({"default", "standard", "standard_only", "global"})
+
+
+def _worst(value: str | None, multipliers: dict[str, float]) -> float:
+    """The multiplier a request setting bills at: its own when known, else the dearest."""
+    if value in multipliers:
+        return float(multipliers[value])
+    if value in _STANDARD:
+        return 1.0
+    return max([1.0, *map(float, multipliers.values())])
 
 
 def _normalise(model: str) -> str:

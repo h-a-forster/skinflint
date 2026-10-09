@@ -39,7 +39,10 @@ from skinflint.model import (
 )
 from skinflint.store import Store, Txn
 
-DEFAULT_MAX_OUTPUT = 4096
+# Worst-case assumptions where the request body does not say:
+DEFAULT_MAX_OUTPUT = 128_000  # no max_tokens / max_output_tokens: the largest model limit
+SERVER_CONTEXT_TOKENS = 1_050_000  # server-held prompt we never saw: the largest context window
+UNCAPPED_WEB_SEARCHES = 50  # a web search tool without max_uses
 DEFAULT_PENDING_TTL = 900.0
 
 WINDOW_PHRASE = {
@@ -55,7 +58,16 @@ class PricingLike(Protocol):
     def lookup(self, provider: Provider, model: str) -> tuple[Price | None, bool]: ...
 
     def max_cost(
-        self, provider: Provider, model: str, prompt_tokens: int, output_tokens: int
+        self,
+        provider: Provider,
+        model: str,
+        prompt_tokens: int,
+        output_tokens: int,
+        *,
+        speed: str | None = None,
+        service_tier: str | None = None,
+        inference_geo: str | None = None,
+        web_searches: int = 0,
     ) -> float: ...
 
 
@@ -184,25 +196,49 @@ class Budget:
     def applies(self, rule: BudgetRule, scope: str, model: str) -> bool:
         return fnmatchcase(scope, rule.scope) and fnmatchcase(model, rule.model)
 
-    def reservation(self, info: RequestInfo) -> tuple[float, int] | None:
+    def reservation(self, info: RequestInfo, txn: Txn | None = None) -> tuple[float, int] | None:
         """(usd, tokens) to hold while the request is in flight; None if the model has no
-        price (unknown_model = 'block')."""
+        price (unknown_model = 'block'). `txn` lets the worst case look up the size of an
+        OpenAI ``previous_response_id`` in the ledger."""
         price, _exact = self.pricing.lookup(info.provider, info.model)
         if price is None:
             return None
-        prompt = max(info.est_prompt_tokens, 0)
         if self.reserve == "worst_case":
-            out = info.max_output_tokens or DEFAULT_MAX_OUTPUT
-            usd = self.pricing.max_cost(info.provider, info.model, prompt, out)
+            prompt = max(info.max_prompt_tokens, info.est_prompt_tokens, 0)
+            prompt += self._server_context(info, txn)
+            out = info.max_output_tokens
+            out = DEFAULT_MAX_OUTPUT if out is None else out
+            searches = info.web_searches
+            usd = self.pricing.max_cost(
+                info.provider,
+                info.model,
+                prompt,
+                out,
+                speed=info.speed,
+                service_tier=info.service_tier,
+                inference_geo=info.inference_geo,
+                web_searches=UNCAPPED_WEB_SEARCHES if searches is None else searches,
+            )
             return usd, prompt + out
+        prompt = max(info.est_prompt_tokens, 0)
         return prompt * price.input / 1_000_000, prompt
+
+    @staticmethod
+    def _server_context(info: RequestInfo, txn: Txn | None) -> int:
+        """Tokens of a prompt the provider holds (previous_response_id, conversation)."""
+        if info.server_context:
+            return SERVER_CONTEXT_TOKENS
+        if info.previous_response_id is None:
+            return 0
+        known = txn.response_tokens(info.provider, info.previous_response_id) if txn else None
+        return SERVER_CONTEXT_TOKENS if known is None else known
 
     def admit(self, record: Record, info: RequestInfo) -> Decision:
         """Check every applicable rule and insert the ledger row, atomically."""
         now = self.clock()
         warnings: list[str] = []
         with self.store.immediate() as txn:
-            res = self.reservation(info)
+            res = self.reservation(info, txn)
             if res is None:
                 msg = (
                     f"skinflint: no price known for model '{info.model}' and unknown models "

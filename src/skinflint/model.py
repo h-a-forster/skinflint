@@ -140,6 +140,14 @@ class RequestInfo:
     max_output_tokens: int | None  # max_tokens / max_completion_tokens / max_output_tokens
     est_prompt_tokens: int  # rough pre-flight estimate from the body size
     session_hint: str | None = None  # session id found in the body, if any
+    # Inputs to the worst-case reservation (reserve = "worst_case"):
+    max_prompt_tokens: int = 0  # conservative upper bound on the prompt read from the body
+    speed: str | None = None  # Anthropic "speed" ("fast" bills at fast-mode rates)
+    service_tier: str | None = None  # requested tier; None / "auto" may bill at the dearest
+    inference_geo: str | None = None  # Anthropic "inference_geo"; None may be a "us" default
+    web_searches: int | None = 0  # most server-side web searches allowed; None = no cap set
+    previous_response_id: str | None = None  # OpenAI: prompt continues a server-held one
+    server_context: bool = False  # OpenAI "conversation": prompt includes server-held items
 
 
 @dataclass(slots=True)
@@ -160,7 +168,7 @@ class Record:
     status: int | None = None  # HTTP status sent to the client
     usage: Usage = field(default_factory=Usage)
     cost_usd: float = 0.0
-    cost_estimated: bool = False  # the model had no exact price entry
+    cost_estimated: bool = False  # no exact price entry, or usage estimated (cut-off stream)
     reserved_usd: float = 0.0  # held against budgets while pending
     reserved_tokens: int = 0
     duration_ms: int | None = None

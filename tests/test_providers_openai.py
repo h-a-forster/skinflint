@@ -381,3 +381,20 @@ def test_ratelimit_headers():
         CIMultiDict({"X-RateLimit-Remaining-Tokens": "100", "x-request-id": "r", "Date": "d"})
     )
     assert adapter.ratelimit_headers(headers) == {"x-ratelimit-remaining-tokens": "100"}
+
+
+def test_parse_request_worst_case_hints():
+    adapter = OpenAIAdapter()
+    body = {
+        "model": "gpt-5.5",
+        "input": "hi",
+        "service_tier": "priority",
+        "previous_response_id": "resp_abc",
+        "tools": [{"type": "web_search"}],
+    }
+    info = adapter.parse_request(Endpoint.RESPONSES, body)
+    assert info.service_tier == "priority" and info.previous_response_id == "resp_abc"
+    assert info.web_searches is None and not info.server_context
+    assert info.max_prompt_tokens >= info.est_prompt_tokens
+    info = adapter.parse_request(Endpoint.RESPONSES, {"model": "m", "conversation": "conv_1"})
+    assert info.server_context and info.previous_response_id is None
