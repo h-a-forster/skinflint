@@ -66,6 +66,9 @@ class Usage:
     output_tokens: int = 0  # includes reasoning / thinking tokens
     reasoning_tokens: int = 0  # subset of output_tokens; informational only
     web_search_requests: int = 0
+    speed: str | None = None  # Anthropic fast mode reports "fast"
+    service_tier: str | None = None  # e.g. "standard", "priority", "flex", "batch"
+    inference_geo: str | None = None  # Anthropic data residency, e.g. "us"
 
     @property
     def cache_write(self) -> int:
@@ -91,18 +94,19 @@ class Usage:
 
 @dataclass(frozen=True, slots=True)
 class Price:
-    """USD per million tokens. Cache fields fall back to provider multipliers when unset."""
+    """USD per million tokens, fully resolved (no missing cache rates)."""
 
     input: float
     output: float
     cache_write_5m: float
     cache_write_1h: float
     cache_read: float
-    # Prompts longer than this many tokens are billed at the long_* rates (whole request).
-    long_context_threshold: int | None = None
-    long_input: float | None = None
-    long_output: float | None = None
     web_search_per_1k: float = 0.0
+    # When prompt_tokens exceeds the threshold, the whole request uses `long`.
+    long_context_threshold: int | None = None
+    long: Price | None = None
+    # Rates when the response reports speed == "fast".
+    fast: Price | None = None
 
 
 @dataclass(slots=True)
@@ -150,7 +154,7 @@ class Record:
     state: State
     id: int | None = None
     session: str | None = None
-    agent: str | None = None  # fingerprint of the agent's tool set and system prompt
+    agent: str | None = None  # agent id header, else "fp:" + fingerprint of tools and system
     client: str | None = None  # short client name from the User-Agent, e.g. "claude-cli/2.1.287"
     stream: bool = False
     status: int | None = None  # HTTP status sent to the client
@@ -164,6 +168,12 @@ class Record:
     upstream_id: str | None = None  # provider request / message id
     blocked_by: str | None = None  # budget rule name
     error: str | None = None
+    plan: bool = False  # sent with a subscription (OAuth) login: cost is notional
+    request_class: str | None = None  # Claude Code hint: main, subagent, compaction, auxiliary
+    cache_miss_reason: str | None = None  # Anthropic diagnostics.cache_miss_reason.type
+    cache_missed_tokens: int | None = (
+        None  # diagnostics.cache_miss_reason.cache_missed_input_tokens
+    )
 
 
 @dataclass(frozen=True, slots=True)

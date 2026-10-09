@@ -29,11 +29,11 @@ PRICE_KEYS = {
     "cache_write_5m",
     "cache_write_1h",
     "cache_read",
-    "long_context_threshold",
-    "long_input",
-    "long_output",
     "web_search_per_1k",
+    "long_context",
+    "fast",
 }
+RATE_KEYS = {"input", "output", "cache_write_5m", "cache_write_1h", "cache_read"}
 
 DEFAULT_CONFIG = """\
 # skinflint configuration. Every section is optional.
@@ -91,6 +91,7 @@ class Config:
     unknown_model: str = "max"  # max | block
     unmetered: str = "allow"  # allow | block
     inject_stream_usage: bool = True  # OpenAI chat streams: ask for usage, hide the extra chunk
+    cache_diagnostics: bool = True  # Anthropic: add diagnostics.previous_message_id to requests
     budgets: list[BudgetRule] = field(default_factory=list)
     prices: dict[str, dict[str, Any]] = field(default_factory=dict)  # model id -> price fields
     source: Path | None = None  # file this config was loaded from
@@ -124,7 +125,11 @@ def load(path: Path | None = None) -> Config:
 
 def parse(data: dict[str, Any], base_dir: Path | None = None) -> Config:
     cfg = Config()
-    _check_keys(data, {"server", "upstream", "storage", "limits", "openai", "budget", "prices"}, "")
+    _check_keys(
+        data,
+        {"server", "upstream", "storage", "limits", "anthropic", "openai", "budget", "prices"},
+        "",
+    )
 
     server = _table(data, "server")
     _check_keys(server, {"host", "port"}, "server")
@@ -157,6 +162,12 @@ def parse(data: dict[str, Any], base_dir: Path | None = None) -> Config:
     )
     cfg.unmetered = _choice(limits, "unmetered", cfg.unmetered, {"allow", "block"}, "limits")
 
+    anthropic = _table(data, "anthropic")
+    _check_keys(anthropic, {"cache_diagnostics"}, "anthropic")
+    cfg.cache_diagnostics = _bool(
+        anthropic, "cache_diagnostics", cfg.cache_diagnostics, "anthropic"
+    )
+
     openai = _table(data, "openai")
     _check_keys(openai, {"inject_stream_usage"}, "openai")
     cfg.inject_stream_usage = _bool(
@@ -184,6 +195,16 @@ def parse(data: dict[str, Any], base_dir: Path | None = None) -> Config:
             if key == "provider":
                 if value not in {p.value for p in Provider}:
                     raise ConfigError(f"{where}.provider: expected anthropic or openai")
+            elif key in ("long_context", "fast"):
+                allowed = RATE_KEYS | ({"threshold"} if key == "long_context" else set())
+                if not isinstance(value, dict):
+                    raise ConfigError(f"{where}.{key}: expected a table")
+                _check_keys(value, allowed, f"{where}.{key}")
+                if key == "long_context" and "threshold" not in value:
+                    raise ConfigError(f"{where}.long_context: threshold is required")
+                for k, v in value.items():
+                    if not _is_number(v) or v < 0:
+                        raise ConfigError(f"{where}.{key}.{k}: expected a non-negative number")
             elif not _is_number(value) or value < 0:
                 raise ConfigError(f"{where}.{key}: expected a non-negative number")
         if "input" not in entry or "output" not in entry:
