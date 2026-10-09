@@ -83,7 +83,8 @@ Findings:
 ## 2. A multi-turn session
 
 Task: add a function and its tests in a small Python project (`claude -p`, Haiku 4.5), then
-resume the same conversation with `claude -c` after 7 minutes idle.
+resume the same conversation with `claude -c` after 7 minutes idle. `skinflint cache`,
+with rows and the `extra` column trimmed:
 
 ```text
 session f43e4ca4-3136-4754-a03f-a984f8a064f4: 11 requests, hit rate 98%
@@ -106,9 +107,8 @@ Findings:
   system prompts share a cache across sessions.
 - Request 9 came after 7 minutes idle and still hit. Claude Code marks its breakpoints with
   the 1-hour TTL, so the 5-minute expiry does not apply.
-- Across the session, the profiler flagged 36 tools and one MCP server that were sent on
-  all 11 requests and never called: 343k tokens of built-in tool definitions and 15.7k of
-  MCP tool definitions.
+- The profiler flagged 28 built-in tools and one MCP server (8 tools) that were sent on
+  all 11 requests and never called: 304k and 15.7k tokens, 65% of the session's prompt.
 
 ## 3. A cache break
 
@@ -130,17 +130,20 @@ verdicts: 2 hit, 1 partial, 1 api_reported
 extra cost from misses: $0.0101 (5.3k tokens not read from cache)
 top causes:
   1 x api_reported: tools_changed: WebFetch, WebSearch removed  $0.0101
+  1 x partial
 ```
 
 On Opus 5.5, the first miss would have cost about $0.33.
 
 ## 4. Caps
 
-Each client was run against a per-session budget until it was refused:
+Claude Code and Codex were run against a `$0.01` per-session budget. The first request of
+each needed more than that, so it was refused before reaching the provider. The SDKs were
+run against a `requests = 0` rule.
 
 | Client | Status | Shown | Attempts |
 |---|---|---|---:|
-| Claude Code 2.1.287 | 402 | `API Error: 402 skinflint: budget 'session' reached: ...` | 1 |
+| Claude Code 2.1.287 | 402 | `API Error: 402 skinflint: budget 'session' reached: $0 of $0.01 used this session (...); this request needs up to $0.0397. Edit or remove it in config.toml.` | 1 |
 | Codex CLI 0.162.0 | 429 | `Quota exceeded. Check your plan and billing details.` | 1 |
 | `anthropic` 1.13.0 | 402 | `APIStatusError`, type `billing_error` | 1 |
 | `openai` 3.27.0 | 429 | `RateLimitError`, code `skinflint_budget_exceeded` | 1 |
@@ -148,8 +151,9 @@ Each client was run against a per-session budget until it was refused:
 No client retried. Every refused request was recorded as `blocked` and never reached the
 provider.
 
-Codex through the proxy, before the cap: one request, 17.1k prompt tokens, 98% cached,
-session id captured from Codex's `session-id` header.
+Codex without a cap: one request, 17.1k prompt tokens, 98% cached, $0.0103
+API-equivalent. The session id came from Codex's `session-id` header, and the request was
+marked as subscription traffic from its `chatgpt-account-id` header.
 
 ## 5. Overhead
 
@@ -165,8 +169,9 @@ numbers as an order of magnitude.
 | Claude Code 226 KB, SSE | ttfb | 1.80 | +12.75 | +18.77 | +21.81 |
 
 A model's time to first token is hundreds of milliseconds to seconds, so 5 to 15 ms is
-under the noise. Profiling runs in a worker thread in parallel with the upstream call and
-does not delay the response.
+under the noise. Overhead grows with body size because the request is parsed before it is
+forwarded, to check budgets. Full profiling runs in a worker thread in parallel with the
+upstream call.
 
 With 32 concurrent streams the proxy sustained 187 requests per second against 497 direct
 on this run. One agent sends a few requests per minute.

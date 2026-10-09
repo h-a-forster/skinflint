@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta, tzinfo
 
 import pytest
 
-from skinflint.budget import Budget, window_end, window_start
+from skinflint.budget import Budget, limit_text, window_end, window_start
 from skinflint.model import (
     Action,
     BudgetRule,
@@ -431,3 +431,11 @@ def test_concurrent_admission_two_processes(tmp_path):
     finally:
         for s in stores:
             s.close()
+
+
+@pytest.mark.parametrize(
+    ("usd", "text"),
+    [(0.01, "$0.01"), (0.025, "$0.025"), (0.5, "$0.50"), (0.1234, "$0.1234"), (5, "$5.00")],
+)
+def test_limit_text(usd, text):
+    assert limit_text(usd) == text

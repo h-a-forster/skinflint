@@ -204,6 +204,6 @@ A **session** is one agent conversation. skinflint reads it from:
 
 1. the `x-skinflint-session` header;
 2. Claude Code's `x-claude-code-session-id` header or `metadata.user_id`;
-3. Codex's `session_id` header.
+3. Codex's `session-id` header.
 
 `x-skinflint-*` headers are removed before the request is forwarded.

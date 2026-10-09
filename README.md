@@ -1,6 +1,6 @@
 # skinflint
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/h-a-forster/skinflint/actions/workflows/ci.yml/badge.svg)](https://github.com/h-a-forster/skinflint/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
@@ -25,7 +25,8 @@ unchanged. Each one is checked against your budgets first and recorded after.
 - **Hard caps.** Budgets per day, hour, week, month or forever; per scope, per session or per
   request; in dollars, tokens or requests. Over the cap, the request is refused with the
   provider's own error format and `x-should-retry: false`, so clients stop instead of
-  retrying. Checks and reservations are atomic, so parallel agents cannot overshoot together.
+  retrying. Checks and reservations are atomic, so parallel agents cannot all pass the same
+  remaining budget.
 - **Context profiler.** Splits each request into tool definitions, MCP servers, system
   prompt, instruction files, skills lists, tool results and messages, and attributes the real
   token count and cost to each. Flags tools and MCP servers that are sent on every request and
@@ -43,7 +44,7 @@ never stored or logged.
 
 ```sh
 uv tool install skinflint      # or: pipx install skinflint
-skinflint init                 # writes ~/.skinflint/config.toml with a $20/day cap
+skinflint init                 # writes ~/.skinflint/config.toml: $20/day, $5/session
 skinflint serve
 ```
 
@@ -68,7 +69,9 @@ skinflint profile --session last  # where the tokens went
 skinflint cache --session last    # why the cache missed
 ```
 
-Setup for Codex, the SDKs and the status line: [docs/clients.md](d## Example
+Setup for Codex, the SDKs and the status line: [docs/clients.md](docs/clients.md).
+
+## Example
 
 One request from Claude Code, as seen by `skinflint profile`:
 
@@ -94,18 +97,16 @@ verdicts: 2 hit, 1 partial, 1 api_reported
 extra cost from misses: $0.0101 (5.3k tokens not read from cache)
 top causes:
   1 x api_reported: tools_changed: WebFetch, WebSearch removed  $0.0101
+  1 x partial
 ```
 
 When a cap is reached, Claude Code shows the refusal and stops:
 
 ```text
-API Error: 402 skinflint: budget 'session' reached: $5.01 of $5.00 used this session (3af4ca3c-...).
+API Error: 402 skinflint: budget 'session' reached: $0 of $0.01 used this session (e2452a83-...); this request needs up to $0.0397. Edit or remove it in config.toml.
 ```
 
 Codex shows `Quota exceeded.` and stops. More measurements: [docs/results.md](docs/results.md).
-
-f4ca3c-...).
-```
 
 ## Budgets
 

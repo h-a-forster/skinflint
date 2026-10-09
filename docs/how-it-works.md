@@ -120,7 +120,7 @@ request does not look like a cache break in the main conversation.
 |---|---|
 | `requests` | One row per metered request: time, scope, session, agent, client, model, state, status, token counts by class, cost, reservation, latency, provider request id, cache-miss reason, error text. |
 | `profiles` | Per request: segment kind, label, group, size, hash and breakpoint, compressed. Raw body only with `store_bodies = true`. |
-| `ratelimits` | Latest Anthropic `anthropic-ratelimit-unified-*` headers (subscription plan usage). |
+| `ratelimits` | Latest rate-limit headers: Anthropic `anthropic-ratelimit-*` (including subscription plan usage), OpenAI `x-ratelimit-*`, Codex `x-codex-*`. |
 
 API keys, `Authorization` headers and response content are never stored.
 

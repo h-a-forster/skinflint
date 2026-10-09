@@ -39,7 +39,7 @@ export ANTHROPIC_CUSTOM_HEADERS="x-skinflint-scope: my-project"
 When a budget blocks, Claude Code shows the message and stops without retrying:
 
 ```text
-API Error: 402 skinflint: budget 'session' reached: $5.01 of $5.00 used this session (3af4ca3c-...).
+API Error: 402 skinflint: budget 'session' reached: $0 of $0.01 used this session (e2452a83-...); this request needs up to $0.0397. Edit or remove it in config.toml.
 ```
 
 Set `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1` to have Claude Code label each request as `main`,
@@ -66,7 +66,8 @@ skinflint $0.42 session · $3.10/$20 today · cache 91% · 5h 47%
 
 ## Codex CLI
 
-Codex reads its base URL from `~/.codex/config.toml` (not from `OPENAI_BASE_URL`).
+Codex reads its base URL from `~/.codex/config.toml` (not from `OPENAI_BASE_URL`), so
+`skinflint run -- codex` does not route Codex through the proxy. Use `skinflint serve`.
 
 With an API key:
 

@@ -26,4 +26,4 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `run` wraps one command in a private, optionally capped proxy.
 - Claude Code status line, including subscription five-hour usage.
 - Claude Code (API key and subscription) and Codex CLI (API key and ChatGPT login) support.
-- Built-in prices for 57 models, overridable in config.
+- Built-in prices for 55 models, overridable in config.

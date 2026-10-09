@@ -23,6 +23,7 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Protocol
 
+from skinflint.fmt import money
 from skinflint.model import (
     Action,
     BudgetRule,
@@ -102,8 +103,12 @@ def window_end(window: Window, now: float, tz: tzinfo | None = None) -> float | 
     return end.timestamp()
 
 
-def money(usd: float) -> str:
-    return f"${usd:.4f}" if abs(usd) < 1 else f"${usd:,.2f}"
+def limit_text(usd: float) -> str:
+    """A configured limit as written: $0.01, $0.025, $5.00."""
+    if usd >= 1:
+        return f"${usd:,.2f}"
+    text = f"{usd:.4f}".rstrip("0")
+    return "$" + (text + "0" if len(text.split(".")[1]) < 2 else text)
 
 
 def tokens_text(n: float) -> str:
@@ -300,7 +305,7 @@ class Budget:
             if rule.usd is not None and res_usd > rule.usd:
                 return (
                     f"reached: this request may cost {money(res_usd)}, over the "
-                    f"{money(rule.usd)} per-request limit"
+                    f"{limit_text(rule.usd)} per-request limit"
                 )
             return None
         spend = txn.spend(
@@ -314,7 +319,7 @@ class Budget:
         )
         where = self._window_text(rule, record, now)
         if rule.usd is not None and (spend.usd >= rule.usd or spend.usd + res_usd > rule.usd):
-            text = f"reached: {money(spend.usd)} of {money(rule.usd)} used {where}"
+            text = f"reached: {money(spend.usd)} of {limit_text(rule.usd)} used {where}"
             if spend.usd < rule.usd:
                 text += f"; this request needs up to {money(res_usd)}"
             return text
