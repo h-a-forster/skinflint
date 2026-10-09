@@ -139,4 +139,4 @@ skinflint report --since 10m
 | Claude Code | 402 | Shows `API Error: 402 <message>`, stops, no retry. |
 | Anthropic SDKs | 402 | Raises an `APIStatusError` (no retry: `x-should-retry: false`). |
 | OpenAI SDKs | 429 | Raises `RateLimitError` with code `skinflint_budget_exceeded` (no retry: `x-should-retry: false`). |
-| Codex | 429 | Reports the quota error and stops. |
+| Codex | 429 | Shows `Quota exceeded. Check your plan and billing details.`, stops, no retry. |

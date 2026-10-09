@@ -14,9 +14,9 @@ unchanged. Each one is checked against your budgets first and recorded after.
 
 - **Agents spend unattended.** Provider spend limits are per organisation and per month.
   Nothing stops one runaway session or one CI job at $5.
-- **Most of the prompt is not your prompt.** Through skinflint, Claude Code 2.1.287 sent
-  57,818 tokens to answer `Reply with exactly: hi`. 79% were tool definitions; 41 of the 42
-  tools were never called. See [results](docs/results.md).
+- **Most of the prompt is not your prompt.** Claude Code 2.1.287 sent 43,325 tokens to
+  answer `Reply with exactly: hi`. 76% were definitions of 39 tools; none was called. With
+  six tools the same request was 13,884 tokens. See [results](docs/results.md).
 - **Cache misses are silent.** One changed tool schema or a timestamp in the system prompt
   re-bills the whole prefix at the cache-write rate. The response only shows a bigger number.
 
@@ -68,34 +68,43 @@ skinflint profile --session last  # where the tokens went
 skinflint cache --session last    # why the cache missed
 ```
 
-Setup for Codex, the SDKs and the status line: [docs/clients.md](docs/clients.md).
+Setup for Codex, the SDKs and the status line: [docs/clients.md](d## Example
 
-## Example
-
-A Claude Code session, as seen by `skinflint profile --session last`:
+One request from Claude Code, as seen by `skinflint profile`:
 
 ```text
-session 2d6d2aaa-7346-479e-9b9e-200680e3ed16  3 requests  prompt 120k  prompt cost $0.0227
+request #1  21:27  claude-haiku-4-5-20251001  prompt 43.3k (0% cached)  output 40  $0.0868
 
 group                             tokens  share      cost
 --------------------------------  ------  -----  --------
-tools: built-in                    91.6k    76%   $0.0092
-system prompt                      17.1k    14%   $0.0037
-context: skills                     3.7k     3%   $0.0039
-tools: mcp claude_ai_Claude_Docs    2.8k     2%   $0.0003
-context: agent types                1.6k     1%   $0.0017
-instruction files                     1k     1%   $0.0011
+tools: built-in                    31.3k    72%   $0.0626
+system prompt                       6.4k    15%   $0.0129
+context: skills                     1.9k     4%   $0.0038
+tools: mcp claude_ai_Claude_Docs    1.4k     3%   $0.0029
+context: agent types                 585     1%   $0.0012
+instruction files                    520     1%   $0.0010
 ...
+user prompts                          11     0%  <$0.0001
+```
 
-suggestions:
-  - MCP server 'claude_ai_Claude_Docs' adds 1.4k tokens to each of 2 requests (2.8k tokens, $0.0003) and was never called.
-  - 33 built-in tools were never called; together they add 45.1k tokens to each request ($0.0090 this session).
+A resumed session with two tools removed, as seen by `skinflint cache`:
+
+```text
+verdicts: 2 hit, 1 partial, 1 api_reported
+extra cost from misses: $0.0101 (5.3k tokens not read from cache)
+top causes:
+  1 x api_reported: tools_changed: WebFetch, WebSearch removed  $0.0101
 ```
 
 When a cap is reached, Claude Code shows the refusal and stops:
 
 ```text
 API Error: 402 skinflint: budget 'session' reached: $5.01 of $5.00 used this session (3af4ca3c-...).
+```
+
+Codex shows `Quota exceeded.` and stops. More measurements: [docs/results.md](docs/results.md).
+
+f4ca3c-...).
 ```
 
 ## Budgets
