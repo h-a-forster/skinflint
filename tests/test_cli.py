@@ -413,6 +413,17 @@ async def test_run_cap_blocks(home, upstream, capsys):
     assert upstream.calls == []
     assert "0 requests" in err and "$0 of $0" in err and "1 blocked" in err
     assert "skinflint: run-" in err
+    with Store.open_readonly(home / "skinflint.db") as store:
+        (rec,) = store.records()
+    assert rec.error.endswith("Raise --cap to allow more.")
+
+
+def test_child_env():
+    base = "http://127.0.0.1:5000/s/job"
+    env = cli.child_env({"PYTHONHOME": sys.base_prefix, "KEEP": "1"}, base)
+    assert env == {"KEEP": "1", "ANTHROPIC_BASE_URL": base, "OPENAI_BASE_URL": base + "/v1"}
+    other = cli.child_env({"PYTHONHOME": "/opt/python"}, base)
+    assert other["PYTHONHOME"] == "/opt/python"
 
 
 def test_run_usage(capsys, home):

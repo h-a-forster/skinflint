@@ -187,6 +187,7 @@ class BudgetRule:
     scope: str = "*"  # glob over scope labels
     model: str = "*"  # glob over model ids
     action: Action = Action.BLOCK
+    hint: str | None = None  # how to lift the cap; default: edit the config file
 
 
 @dataclass(slots=True)

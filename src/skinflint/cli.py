@@ -11,6 +11,7 @@ from skinflint import __version__
 
 if TYPE_CHECKING:
     import argparse
+    from collections.abc import Mapping
 
 PROG = "skinflint"
 SCOPE_CHARS = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:@+-")
@@ -268,6 +269,19 @@ def _resolve_command(cmd: list[str]) -> list[str]:
     return [found, *cmd[1:]]
 
 
+def child_env(environ: Mapping[str, str], base: str) -> dict[str, str]:
+    """Environment for a `run` child: base URLs pointed at the proxy."""
+    env = dict(environ)
+    # uv's launcher sets PYTHONHOME for skinflint's own interpreter; a Python child of a
+    # different version would load the wrong standard library.
+    home = env.get("PYTHONHOME")
+    if home and os.path.normcase(home) == os.path.normcase(sys.base_prefix):
+        del env["PYTHONHOME"]
+    env["ANTHROPIC_BASE_URL"] = base
+    env["OPENAI_BASE_URL"] = f"{base}/v1"
+    return env
+
+
 def run_child(cmd: list[str], env: dict[str, str]) -> int:
     """Run `cmd` with inherited stdio; the terminal's Ctrl+C reaches it directly."""
     import signal
@@ -326,7 +340,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         rules = [r for r in rules if r.name != "run cap"]
         rules.append(
             BudgetRule(
-                name="run cap", usd=args.cap, per=Per.SCOPE, window=Window.TOTAL, scope=scope
+                name="run cap",
+                usd=args.cap,
+                per=Per.SCOPE,
+                window=Window.TOTAL,
+                scope=scope,
+                hint="Raise --cap to allow more.",
             )
         )
     host = cfg.host if cfg.is_loopback else "127.0.0.1"
@@ -338,10 +357,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     start = time.time()
     with proxy.embedded(run_cfg) as base:
         base = base.rstrip("/")
-        env = dict(os.environ)
-        env["ANTHROPIC_BASE_URL"] = f"{base}/s/{scope}"
-        env["OPENAI_BASE_URL"] = f"{base}/s/{scope}/v1"
-        code = run_child(cmd, env)
+        code = run_child(cmd, child_env(os.environ, f"{base}/s/{scope}"))
     try:
         with Store.open_readonly(cfg.db_path) as store:
             rows = store.records(since=start, scope=scope)
@@ -591,7 +607,7 @@ def resolve_price(pricing, query: str, provider=None):
         if name.startswith(model_id):
             return p, model_id, f"longest known prefix {model_id}, estimated", price
         if fallback is None:
-            how = f"unknown model: priced as {model_id}, the most expensive {p} model, estimated"
+            how = f"unknown model: priced as {model_id}, the {p} flagship, estimated"
             fallback = (p, model_id, how, price)
     if fallback is None:
         raise CliError(f'no price for {query!r} (limits.unknown_model = "block")')

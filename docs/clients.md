@@ -59,7 +59,7 @@ Add to `~/.claude/settings.json`:
 It prints one line from the ledger, for example:
 
 ```text
-skinflint $0.42 session · $3.10/$20 today · cache 91% · 5h 47%
+skinflint $0.42/$5 session · $3.10/$20 today · cache 91% · 5h 47%
 ```
 
 `5h` is the subscription's five-hour usage, read from Anthropic's rate-limit headers.

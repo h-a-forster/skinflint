@@ -435,7 +435,16 @@ def test_concurrent_admission_two_processes(tmp_path):
 
 @pytest.mark.parametrize(
     ("usd", "text"),
-    [(0.01, "$0.01"), (0.025, "$0.025"), (0.5, "$0.50"), (0.1234, "$0.1234"), (5, "$5.00")],
+    [
+        (0, "$0"),
+        (0.00001, "<$0.0001"),
+        (0.01, "$0.01"),
+        (0.025, "$0.025"),
+        (0.5, "$0.50"),
+        (0.1234, "$0.1234"),
+        (0.99999, "$1.00"),
+        (5, "$5.00"),
+    ],
 )
 def test_limit_text(usd, text):
     assert limit_text(usd) == text

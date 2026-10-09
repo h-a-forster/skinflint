@@ -51,7 +51,7 @@ skinflint never stores API keys or `Authorization` headers.
 | Key | Default | Meaning |
 |---|---|---|
 | `reserve` | `"estimate"` | What an in-flight request holds against budgets. See [Reservations](#reservations). |
-| `unknown_model` | `"max"` | Models without a price: `"max"` prices them at the provider's most expensive model and marks the cost as estimated; `"block"` refuses them. |
+| `unknown_model` | `"max"` | Models without a price: `"max"` prices them at the provider's flagship model and marks the cost as estimated; `"block"` refuses them. |
 | `unmetered` | `"allow"` | `POST` requests to endpoints skinflint cannot meter (batches, embeddings, images). `"block"` refuses them while any budget is configured. Token counting endpoints stay open. |
 
 ## `[anthropic]`

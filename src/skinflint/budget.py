@@ -104,11 +104,15 @@ def window_end(window: Window, now: float, tz: tzinfo | None = None) -> float | 
 
 
 def limit_text(usd: float) -> str:
-    """A configured limit as written: $0.01, $0.025, $5.00."""
-    if usd >= 1:
+    """A configured limit as written: $0, $0.01, $0.025, $5.00."""
+    if usd == 0:
+        return "$0"
+    if usd < 0.00005:
+        return "<$0.0001"
+    if round(usd, 4) >= 1:
         return f"${usd:,.2f}"
-    text = f"{usd:.4f}".rstrip("0")
-    return "$" + (text + "0" if len(text.split(".")[1]) < 2 else text)
+    whole, frac = f"{usd:.4f}".split(".")
+    return f"${whole}.{frac.rstrip('0').ljust(2, '0')}"
 
 
 def tokens_text(n: float) -> str:
@@ -223,10 +227,8 @@ class Budget:
                     blocker = (rule, reason)
             if blocker is not None:
                 rule, reason = blocker
-                msg = (
-                    f"skinflint: budget '{rule.name}' {reason}. "
-                    f"Edit or remove it in {self._where()}."
-                )
+                fix = rule.hint or f"Edit or remove it in {self._where()}."
+                msg = f"skinflint: budget '{rule.name}' {reason}. {fix}"
                 self._insert_blocked(txn, record, rule.name, msg)
                 return Decision(
                     allowed=False,
