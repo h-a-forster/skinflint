@@ -29,9 +29,9 @@ classifiers = [
 dependencies = ["aiohttp>=3.13.2", "backports.zstd>=1.0; python_version < \"3.14\""]
 
 [project.urls]
-Homepage = "https://github.com/OWNER/skinflint"
-Issues = "https://github.com/OWNER/skinflint/issues"
-Changelog = "https://github.com/OWNER/skinflint/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/h-a-forster/skinflint"
+Issues = "https://github.com/h-a-forster/skinflint/issues"
+Changelog = "https://github.com/h-a-forster/skinflint/blob/main/CHANGELOG.md"
 
 [project.scripts]
 skinflint = "skinflint.cli:main"

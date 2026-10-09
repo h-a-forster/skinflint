@@ -35,7 +35,7 @@ RATE_KEYS = {"input", "output", "cache_write_5m", "cache_write_1h", "cache_read"
 
 DEFAULT_CONFIG = """\
 # skinflint configuration. Every section is optional.
-# Reference: https://github.com/OWNER/skinflint/blob/main/docs/configuration.md
+# Reference: https://github.com/h-a-forster/skinflint/blob/main/docs/configuration.md
 
 [server]
 host = "127.0.0.1"
