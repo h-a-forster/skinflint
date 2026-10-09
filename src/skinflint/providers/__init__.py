@@ -27,7 +27,7 @@ def detect(path: str, headers: Mapping[str, str]) -> Provider:
     """Anthropic if an anthropic-version header is present or the path is an Anthropic one."""
     if header(headers, "anthropic-version") is not None:
         return Provider.ANTHROPIC
-    if path.startswith(("/v1/messages", "/v1/complete")):
+    if path.startswith(("/v1/messages", "/v1/complete", "/api/hello")):
         return Provider.ANTHROPIC
     return Provider.OPENAI
 

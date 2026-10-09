@@ -72,6 +72,7 @@ def test_detect_and_registry():
     assert detect("/whatever", {"Anthropic-Version": "2023-06-01"}) is Provider.ANTHROPIC
     assert detect("/v1/messages", {}) is Provider.ANTHROPIC
     assert detect("/v1/complete", {}) is Provider.ANTHROPIC
+    assert detect("/api/hello", {}) is Provider.ANTHROPIC
     assert detect("/v1/chat/completions", {"authorization": "Bearer x"}) is Provider.OPENAI
 
 

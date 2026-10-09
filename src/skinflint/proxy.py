@@ -11,33 +11,43 @@ import re
 import threading
 import time
 from collections import OrderedDict
-from collections.abc import Iterator, Mapping
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from collections.abc import Awaitable, Callable, Iterator, Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
+from typing import Any, TypeVar
 from urllib.parse import unquote
 
 import aiohttp
 from aiohttp import web
+from aiohttp.web_protocol import RequestPayloadError
 from multidict import CIMultiDict
+from yarl import URL
 
 from skinflint import __version__, segments
 from skinflint.budget import Budget
 from skinflint.config import Config
 from skinflint.model import Decision, Endpoint, Provider, Record, RequestInfo, Segment, State, Usage
 from skinflint.pricing import Pricing
-from skinflint.providers import ADAPTERS, client_name, detect
+from skinflint.providers import ADAPTERS, Adapter, StreamTracker, client_name, detect
 from skinflint.store import Store
 
 log = logging.getLogger("skinflint")
+
+T = TypeVar("T")
 
 FIRST_PARTY = {Provider.ANTHROPIC: "https://api.anthropic.com"}
 SCOPE_RE = re.compile(r"^[A-Za-z0-9._:@+-]{1,64}$")
 HEALTH_PATH = "/_skinflint/health"
 PENDING_TTL = 900.0
+# Longest silence tolerated from the upstream mid-response. Providers send keep-alive pings
+# during long generations, so this only trips on a hung connection.
+UPSTREAM_IDLE_TIMEOUT = 600.0
 MAX_BODY = 256 * 1024 * 1024
 MAX_CONVERSATIONS = 10_000
 # Free endpoints that stay reachable when unmetered = "block".
 FREE_POSTS = ("/v1/messages/count_tokens", "/v1/responses/input_tokens")
+# Request content-encodings aiohttp decodes before the handler reads the body.
+DECODED_ENCODINGS = {"gzip", "deflate", "br", "zstd"}
+UPSTREAM_ERRORS = (TimeoutError, aiohttp.ClientError, OSError)
 
 HOP_BY_HOP = {
     "connection",
@@ -55,6 +65,10 @@ DROP_REQUEST = HOP_BY_HOP | {"host", "content-length", "accept-encoding"}
 DROP_RESPONSE = HOP_BY_HOP | {"content-length", "content-encoding"}
 
 
+class ClientGone(Exception):
+    """The downstream client closed its connection."""
+
+
 class Proxy:
     def __init__(self, cfg: Config, store: Store, pricing: Pricing, budget: Budget) -> None:
         self.cfg = cfg
@@ -70,28 +84,40 @@ class Proxy:
 
     async def start(self, app: web.Application) -> None:
         self.http = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=None, sock_connect=30),
+            timeout=aiohttp.ClientTimeout(
+                total=None, sock_connect=30, sock_read=UPSTREAM_IDLE_TIMEOUT
+            ),
             connector=aiohttp.TCPConnector(limit=0),
             auto_decompress=True,
             trust_env=True,
         )
 
     async def stop(self, app: web.Application) -> None:
+        """Runs after every handler has finished: close upstream connections, then drain the
+        ledger queue so the owner can close the store."""
         if self.http is not None:
             await self.http.close()
-        self.db.shutdown(wait=True)
+        await asyncio.to_thread(self.db.shutdown, True)
 
     def app(self) -> web.Application:
         app = web.Application(client_max_size=MAX_BODY)
+        app[PROXY] = self
         app.on_startup.append(self.start)
         app.on_cleanup.append(self.stop)
         app.router.add_route("*", "/{tail:.*}", self.handle)
         return app
 
-    async def run_db(self, fn, *args, **kwargs):
-        return await asyncio.get_running_loop().run_in_executor(
-            self.db, lambda: fn(*args, **kwargs)
-        )
+    async def run_db(self, fn: Callable[..., T], *args: Any) -> T:
+        return await asyncio.get_running_loop().run_in_executor(self.db, fn, *args)
+
+    def submit(self, fn: Callable[..., Any], *args: Any) -> None:
+        """Queue a ledger write without waiting for it; failures are logged, never raised."""
+        try:
+            future = self.db.submit(fn, *args)
+        except RuntimeError as e:
+            log.error("ledger closed; dropped %s: %s", fn.__name__, e)
+            return
+        future.add_done_callback(log_failure)
 
     # -- request handling ------------------------------------------------------------------
 
@@ -105,19 +131,38 @@ class Proxy:
                     "db": str(self.cfg.db_path),
                 }
             )
+        raw_path, _, raw_query = request.raw_path.partition("?")
         try:
-            scope, path = split_scope(request.path)
+            scope, target = split_scope(raw_path)
         except ValueError as e:
             return plain_error(400, str(e))
         scope = request.headers.get("x-skinflint-scope") or scope
         if not SCOPE_RE.match(scope):
             return plain_error(400, f"invalid scope {scope!r}: use 1-64 of A-Z a-z 0-9 . _ : @ + -")
+        path = unquote(target)
+        if raw_query:
+            target += "?" + raw_query
 
         provider = detect(path, request.headers)
         adapter = ADAPTERS[provider]
         if request.headers.get("upgrade", "").lower() == "websocket":
             log.info("refused websocket upgrade on %s (clients fall back to HTTP)", path)
             return plain_error(426, "skinflint does not proxy WebSockets; use HTTP streaming")
+        try:
+            body = await request.read()
+        except RequestPayloadError as e:
+            # The parser is stuck mid-body: answer, then close the connection.
+            request.content.feed_eof()
+            encoding = request.headers.get("content-encoding", "none")
+            log.warning("could not read the %s request body (%s): %r", path, encoding, e)
+            resp = api_error(
+                provider,
+                400,
+                f"skinflint: could not decode the request body (content-encoding: {encoding})",
+                "invalid_request_error",
+            )
+            resp.force_close()
+            return resp
 
         endpoint = adapter.endpoint(request.method, path)
         if endpoint is None:
@@ -127,49 +172,55 @@ class Proxy:
                 and request.method == "POST"
                 and not path.startswith(FREE_POSTS)
             ):
-                status, headers, body = adapter.error_body(
+                status, headers, err = adapter.error_body(
                     f'skinflint: {path} is not metered and [limits] unmetered = "block"'
                 )
-                return web.Response(status=status, headers=headers, body=body)
-            return await self.passthrough(request, provider, path)
-        return await self.metered(request, provider, endpoint, scope, path)
+                return web.Response(status=status, headers=headers, body=err)
+            return await self.passthrough(request, provider, target, body)
+        return await self.metered(request, adapter, endpoint, scope, path, target, body)
 
     async def passthrough(
-        self, request: web.Request, provider: Provider, path: str
+        self, request: web.Request, provider: Provider, target: str, body: bytes
     ) -> web.StreamResponse:
-        body = await request.read()
         try:
-            upstream = await self.send(request, provider, path, body)
-        except (TimeoutError, aiohttp.ClientError, OSError) as e:
+            upstream = await self.send(request, provider, target, body)
+        except UPSTREAM_ERRORS as e:
             return self.upstream_failure(provider, e)
         async with upstream:
             resp = web.StreamResponse(status=upstream.status, headers=response_headers(upstream))
-            await resp.prepare(request)
-            with contextlib.suppress(ConnectionResetError):
+            try:
+                await to_client(resp.prepare(request))
                 async for chunk in upstream.content.iter_any():
-                    await resp.write(chunk)
-                await resp.write_eof()
+                    await to_client(resp.write(chunk))
+                await to_client(resp.write_eof())
+            except ClientGone:
+                upstream.close()
+            except UPSTREAM_ERRORS as e:
+                log.warning("upstream failed mid-response on %s: %s", target, e)
+                drop_client(request)
             return resp
 
     async def metered(
-        self, request: web.Request, provider: Provider, endpoint: Endpoint, scope: str, path: str
+        self,
+        request: web.Request,
+        adapter: Adapter,
+        endpoint: Endpoint,
+        scope: str,
+        path: str,
+        target: str,
+        raw: bytes,
     ) -> web.StreamResponse:
-        adapter = ADAPTERS[provider]
-        raw = await request.read()
+        provider = adapter.provider
         started = time.time()
         try:
-            data = json.loads(raw)
-            if not isinstance(data, dict):
-                raise ValueError("body is not a JSON object")
-            info = adapter.parse_request(endpoint, data)
-            segs = await asyncio.to_thread(segments.segment, provider, endpoint, data)
+            data, info, segs, fp = await asyncio.to_thread(prepare, adapter, endpoint, raw)
         except Exception as e:  # noqa: BLE001 - unparseable bodies go upstream untouched
             log.warning("could not parse %s request body (%s); forwarding unmetered", path, e)
-            return await self.passthrough_bytes(request, provider, path, raw)
+            return await self.passthrough(request, provider, target, raw)
 
         headers = request.headers
         session = headers.get("x-skinflint-session") or adapter.session_hint(headers, data)
-        agent = headers.get("x-claude-code-agent-id") or ("fp:" + segments.fingerprint(segs))
+        agent = headers.get("x-claude-code-agent-id") or ("fp:" + fp)
         record = Record(
             ts=started,
             provider=provider,
@@ -184,87 +235,93 @@ class Proxy:
             plan="oauth-" in headers.get("anthropic-beta", ""),
             request_class=headers.get("x-claude-code-request-class"),
         )
-        decision: Decision = await self.run_db(self.budget.admit, record, info)
+        try:
+            decision: Decision = await self.run_db(self.budget.admit, record, info)
+        except Exception as e:  # noqa: BLE001
+            log.error("could not check budgets for %s: %s", path, e)
+            if self.cfg.budgets:
+                return api_error(
+                    provider, 503, f"skinflint: ledger unavailable, budgets not checked: {e}"
+                )
+            return await self.passthrough(request, provider, target, raw)
         for warning in decision.warnings:
             log.warning("%s", warning)
         if not decision.allowed:
             log.warning("BLOCKED %s %s %s: %s", scope, short(session), info.model, decision.message)
             status, err_headers, body = adapter.error_body(decision.message)
             return web.Response(status=status, headers=err_headers, body=body)
-        record_id = decision.record_id
-        assert record_id is not None
+        assert decision.record_id is not None
 
-        conversation = (session, agent) if session else None
-        body, injected_usage, injected_diag = self.rewrite(
-            adapter, provider, endpoint, data, info, conversation
-        )
         call = Call(
-            self, request, record, record_id, info, segs, raw if self.cfg.store_bodies else None
+            self, request, record, decision.record_id, segs, raw if self.cfg.store_bodies else None
+        )
+        conversation = (session, agent) if session else None
+        try:
+            return await self.forward(
+                call, adapter, endpoint, target, raw, data, info, conversation
+            )
+        except asyncio.CancelledError:
+            call.settle(State.ABORTED, None, error="cancelled")
+            raise
+        except Exception as e:
+            call.settle(State.ERROR, 500, error=f"proxy error: {e!r}")
+            raise
+
+    async def forward(
+        self,
+        call: Call,
+        adapter: Adapter,
+        endpoint: Endpoint,
+        target: str,
+        raw: bytes,
+        data: dict[str, Any],
+        info: RequestInfo,
+        conversation: tuple[str, str | None] | None,
+    ) -> web.StreamResponse:
+        provider = adapter.provider
+        request = call.request
+        new, injected_usage, injected_diag = self.rewrite(
+            adapter, endpoint, data, info, conversation
         )
         try:
-            upstream = await self.send(request, provider, path, body if body is not None else raw)
-        except (TimeoutError, aiohttp.ClientError, OSError) as e:
+            body = raw if new is None else await asyncio.to_thread(encode, new)
+            upstream = await self.send(request, provider, target, body)
+            if injected_diag and upstream.status == 400:
+                async with upstream:
+                    rejected = await upstream.read()
+                if b"diagnostics" not in rejected:
+                    return call.relay_bytes(upstream, rejected)
+                log.warning("upstream rejected the diagnostics field; disabling cache diagnostics")
+                self.diagnostics = False
+                new, injected_usage, _ = self.rewrite(adapter, endpoint, data, info, None)
+                body = raw if new is None else await asyncio.to_thread(encode, new)
+                upstream = await self.send(request, provider, target, body)
+            async with upstream:
+                call.ttft = time.time() - call.record.ts
+                limits = adapter.ratelimit_headers(upstream.headers)
+                if limits:
+                    self.submit(self.store.save_ratelimit, provider, limits, time.time())
+                if upstream.status >= 300:
+                    return call.relay_bytes(upstream, await upstream.read())
+                if is_event_stream(upstream):
+                    return await call.relay_stream(
+                        upstream, adapter.stream_tracker(endpoint, injected_usage)
+                    )
+                return call.relay_json(upstream, await upstream.read(), endpoint)
+        except UPSTREAM_ERRORS as e:
             call.settle(State.ERROR, 502, error=f"upstream unreachable: {e}")
             return self.upstream_failure(provider, e)
 
-        if injected_diag and upstream.status == 400:
-            text = await upstream.text(errors="replace")
-            upstream.release()
-            if "diagnostics" in text:
-                log.warning("upstream rejected the diagnostics field; disabling cache diagnostics")
-                self.diagnostics = False
-                body, injected_usage, _ = self.rewrite(
-                    adapter, provider, endpoint, data, info, None
-                )
-                try:
-                    upstream = await self.send(
-                        request, provider, path, body if body is not None else raw
-                    )
-                except (TimeoutError, aiohttp.ClientError, OSError) as e:
-                    call.settle(State.ERROR, 502, error=f"upstream unreachable: {e}")
-                    return self.upstream_failure(provider, e)
-            else:
-                call.settle(State.ERROR, 400, error=error_text(text))
-                return web.Response(
-                    status=400, headers=response_headers(upstream), body=text.encode()
-                )
-
-        async with upstream:
-            call.ttft = time.time() - started
-            limits = adapter.ratelimit_headers(upstream.headers)
-            if limits:
-                self.db.submit(self.store.save_ratelimit, provider, limits, time.time())
-            if upstream.status >= 300:
-                return await call.relay_error(upstream)
-            if is_event_stream(upstream):
-                return await call.relay_stream(
-                    upstream, adapter.stream_tracker(endpoint, injected_usage)
-                )
-            return await call.relay_json(upstream, endpoint)
-
-    async def passthrough_bytes(
-        self, request: web.Request, provider: Provider, path: str, body: bytes
-    ) -> web.StreamResponse:
-        try:
-            upstream = await self.send(request, provider, path, body)
-        except (TimeoutError, aiohttp.ClientError, OSError) as e:
-            return self.upstream_failure(provider, e)
-        async with upstream:
-            data = await upstream.read()
-            return web.Response(
-                status=upstream.status, headers=response_headers(upstream), body=data
-            )
-
     def rewrite(
         self,
-        adapter,
-        provider: Provider,
+        adapter: Adapter,
         endpoint: Endpoint,
         data: dict[str, Any],
         info: RequestInfo,
         conversation: tuple[str, str | None] | None,
-    ) -> tuple[bytes | None, bool, bool]:
+    ) -> tuple[dict[str, Any] | None, bool, bool]:
         """Return (new body or None, injected stream usage, injected diagnostics)."""
+        provider = adapter.provider
         previous: Any = ...
         if (
             self.diagnostics
@@ -284,8 +341,7 @@ class Proxy:
             return None, False, False
         injected_usage = provider is Provider.OPENAI and info.stream
         injected_diag = "diagnostics" in new and "diagnostics" not in data
-        body = json.dumps(new, ensure_ascii=False, separators=(",", ":")).encode()
-        return body, injected_usage, injected_diag
+        return new, injected_usage, injected_diag
 
     def remember(self, conversation: tuple[str, str | None] | None, message_id: str | None) -> None:
         if conversation is None or not message_id:
@@ -296,15 +352,13 @@ class Proxy:
             self.last_message.popitem(last=False)
 
     async def send(
-        self, request: web.Request, provider: Provider, path: str, body: bytes
+        self, request: web.Request, provider: Provider, target: str, body: bytes
     ) -> aiohttp.ClientResponse:
+        """Send upstream; `target` is the raw (still percent-encoded) path and query."""
         assert self.http is not None
-        url = self.cfg.upstreams[provider] + path
-        if request.query_string:
-            url += "?" + request.query_string
         return await self.http.request(
             request.method,
-            url,
+            URL(self.cfg.upstreams[provider] + target, encoded=True),
             headers=request_headers(request.headers),
             data=body if body else None,
             allow_redirects=False,
@@ -313,13 +367,10 @@ class Proxy:
     def upstream_failure(self, provider: Provider, error: BaseException) -> web.Response:
         log.error("upstream %s unreachable: %s", self.cfg.upstreams[provider], error)
         message = f"skinflint: could not reach {self.cfg.upstreams[provider]}: {error}"
-        if provider is Provider.ANTHROPIC:
-            body = {"type": "error", "error": {"type": "api_error", "message": message}}
-        else:
-            body = {
-                "error": {"message": message, "type": "server_error", "param": None, "code": None}
-            }
-        return web.json_response(body, status=502)
+        return api_error(provider, 502, message)
+
+
+PROXY = web.AppKey("proxy", Proxy)
 
 
 class Call:
@@ -331,7 +382,6 @@ class Call:
         request: web.Request,
         record: Record,
         record_id: int,
-        info: RequestInfo,
         segs: list[Segment],
         body: bytes | None,
     ) -> None:
@@ -339,21 +389,19 @@ class Call:
         self.request = request
         self.record = record
         self.record_id = record_id
-        self.info = info
         self.segs = segs
         self.body = body
         self.ttft: float | None = None
         self.settled = False
 
-    async def relay_error(self, upstream: aiohttp.ClientResponse) -> web.Response:
-        data = await upstream.read()
+    def relay_bytes(self, upstream: aiohttp.ClientResponse, data: bytes) -> web.Response:
+        """A non-2xx upstream answer, passed through unchanged."""
         self.settle(State.ERROR, upstream.status, error=error_text(data.decode("utf-8", "replace")))
         return web.Response(status=upstream.status, headers=response_headers(upstream), body=data)
 
-    async def relay_json(
-        self, upstream: aiohttp.ClientResponse, endpoint: Endpoint
+    def relay_json(
+        self, upstream: aiohttp.ClientResponse, data: bytes, endpoint: Endpoint
     ) -> web.Response:
-        data = await upstream.read()
         adapter = ADAPTERS[self.record.provider]
         try:
             payload = json.loads(data)
@@ -371,13 +419,15 @@ class Call:
             self.settle(State.OK, upstream.status, error=f"could not read usage: {e}")
         return web.Response(status=upstream.status, headers=response_headers(upstream), body=data)
 
-    async def relay_stream(self, upstream: aiohttp.ClientResponse, tracker) -> web.StreamResponse:
+    async def relay_stream(
+        self, upstream: aiohttp.ClientResponse, tracker: StreamTracker
+    ) -> web.StreamResponse:
         resp = web.StreamResponse(status=upstream.status, headers=response_headers(upstream))
         state = State.OK
         error: str | None = None
         metering = True
         try:
-            await resp.prepare(self.request)
+            await to_client(resp.prepare(self.request))
             async for chunk in upstream.content.iter_any():
                 out = chunk
                 if metering:
@@ -386,19 +436,22 @@ class Call:
                     except Exception as e:  # noqa: BLE001
                         metering, out, error = False, chunk, f"meter failed: {e}"
                 if out:
-                    await resp.write(out)
+                    await to_client(resp.write(out))
             if metering:
                 tail = tracker.close()
                 if tail:
-                    await resp.write(tail)
-            await resp.write_eof()
-        except (ConnectionResetError, asyncio.CancelledError) as e:
+                    await to_client(resp.write(tail))
+            await to_client(resp.write_eof())
+        except ClientGone:
             state, error = State.ABORTED, "client disconnected"
-            if isinstance(e, asyncio.CancelledError):
-                self.settle_from(tracker, state, upstream.status, error)
-                raise
-        except (TimeoutError, aiohttp.ClientError) as e:
-            state, error = State.ERROR, f"upstream stream failed: {e}"
+            upstream.close()
+        except asyncio.CancelledError:
+            upstream.close()
+            self.settle_from(tracker, State.ABORTED, upstream.status, "cancelled")
+            raise
+        except UPSTREAM_ERRORS as e:
+            state, error = State.ERROR, f"upstream stream failed: {e!r}"
+            drop_client(self.request)
         if state is State.OK and not tracker.finished:
             state, error = State.ERROR, error or tracker.error or "stream ended early"
         elif state is State.OK and tracker.error:
@@ -406,7 +459,9 @@ class Call:
         self.settle_from(tracker, state, upstream.status, error)
         return resp
 
-    def settle_from(self, tracker, state: State, status: int, error: str | None) -> None:
+    def settle_from(
+        self, tracker: StreamTracker, state: State, status: int, error: str | None
+    ) -> None:
         diag = (
             getattr(tracker, "cache_miss_reason", None),
             getattr(tracker, "cache_missed_tokens", None),
@@ -424,7 +479,7 @@ class Call:
     def settle(
         self,
         state: State,
-        status: int,
+        status: int | None,
         *,
         usage: Usage | None = None,
         model: str | None = None,
@@ -460,11 +515,47 @@ class Call:
         rec.reserved_tokens = 0
         if state is State.OK and rec.session:
             proxy.remember((rec.session, rec.agent), upstream_id)
-        proxy.db.submit(proxy.store.finish, self.record_id, rec, self.segs, self.body)
+        proxy.submit(proxy.store.finish, self.record_id, rec, self.segs, self.body)
         log_record(rec)
 
 
 # -- helpers -------------------------------------------------------------------------------
+
+
+def prepare(
+    adapter: Adapter, endpoint: Endpoint, raw: bytes
+) -> tuple[dict[str, Any], RequestInfo, list[Segment], str]:
+    """Parse and profile a metered request body (CPU-bound; runs off the event loop)."""
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise ValueError("body is not a JSON object")
+    info = adapter.parse_request(endpoint, data)
+    segs = segments.segment(adapter.provider, endpoint, data)
+    return data, info, segs, segments.fingerprint(segs)
+
+
+def encode(body: dict[str, Any]) -> bytes:
+    return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+
+
+async def to_client(aw: Awaitable[T]) -> T:
+    """Await a write to the downstream client; a closed connection raises ClientGone."""
+    try:
+        return await aw
+    except ConnectionError as e:
+        raise ClientGone(str(e)) from e
+
+
+def drop_client(request: web.Request) -> None:
+    """Close the client connection without finishing the response, so a truncated upstream
+    answer reaches the client as a truncated answer rather than a clean end of stream."""
+    if request.transport is not None:
+        request.transport.close()
+
+
+def log_failure(future: Future) -> None:
+    if not future.cancelled() and future.exception() is not None:
+        log.error("ledger write failed: %s", future.exception())
 
 
 def split_scope(path: str) -> tuple[str, str]:
@@ -484,6 +575,8 @@ def request_headers(headers: Mapping[str, str]) -> CIMultiDict[str]:
         lower = key.lower()
         if lower in DROP_REQUEST or lower.startswith("x-skinflint-"):
             continue
+        if lower == "content-encoding" and value.isascii() and value.lower() in DECODED_ENCODINGS:
+            continue  # aiohttp decoded the body; we forward it decoded
         out.add(key, value)
     return out
 
@@ -509,6 +602,27 @@ def plain_error(status: int, message: str) -> web.Response:
         status=status,
         headers={"x-should-retry": "false"},
     )
+
+
+def api_error(
+    provider: Provider, status: int, message: str, kind: str | None = None
+) -> web.Response:
+    """An error in the provider's own shape (for failures that are not budget refusals)."""
+    if provider is Provider.ANTHROPIC:
+        body: dict[str, Any] = {
+            "type": "error",
+            "error": {"type": kind or "api_error", "message": message},
+        }
+    else:
+        body = {
+            "error": {
+                "message": message,
+                "type": kind or "server_error",
+                "param": None,
+                "code": None,
+            }
+        }
+    return web.json_response(body, status=status)
 
 
 def error_text(text: str) -> str:
@@ -551,6 +665,11 @@ def log_record(rec: Record) -> None:
 # -- running -------------------------------------------------------------------------------
 
 
+def create_app(cfg: Config, store: Store, pricing: Pricing, budget: Budget) -> web.Application:
+    """The proxy as an aiohttp application; the caller owns (and closes) the store."""
+    return Proxy(cfg, store, pricing, budget).app()
+
+
 def build(cfg: Config) -> tuple[Proxy, Store]:
     store = Store(cfg.db_path)
     store.mark_lost(time.time() - PENDING_TTL)
@@ -563,20 +682,22 @@ async def _serve(
     cfg: Config, ready: threading.Event | None = None, holder: dict | None = None
 ) -> None:
     proxy, store = build(cfg)
-    runner = web.AppRunner(proxy.app(), access_log=None, handle_signals=False)
-    await runner.setup()
-    site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=True)
-    await site.start()
-    port = runner.addresses[0][1] if runner.addresses else cfg.port
-    stop = asyncio.Event()
-    if holder is not None:
-        holder.update(port=port, stop=stop, loop=asyncio.get_running_loop())
-    if ready is not None:
-        ready.set()
     try:
-        await stop.wait()
+        runner = web.AppRunner(proxy.app(), access_log=None, handle_signals=False)
+        await runner.setup()
+        try:
+            site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=True)
+            await site.start()
+            port = runner.addresses[0][1] if runner.addresses else cfg.port
+            stop = asyncio.Event()
+            if holder is not None:
+                holder.update(port=port, stop=stop, loop=asyncio.get_running_loop())
+            if ready is not None:
+                ready.set()
+            await stop.wait()
+        finally:
+            await runner.cleanup()
     finally:
-        await runner.cleanup()
         store.close()
 
 
@@ -604,9 +725,12 @@ def embedded(cfg: Config) -> Iterator[str]:
     thread.start()
     ready.wait()
     if errors:
+        thread.join(timeout=10)
         raise errors[0]
     try:
         yield f"http://{cfg.host}:{holder['port']}"
     finally:
         holder["loop"].call_soon_threadsafe(holder["stop"].set)
         thread.join(timeout=10)
+        if errors:
+            raise errors[0]
