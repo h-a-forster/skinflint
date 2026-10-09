@@ -26,7 +26,7 @@ classifiers = [
     "Topic :: Software Development",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-dependencies = ["aiohttp>=3.9"]
+dependencies = ["aiohttp>=3.13.2", "backports.zstd>=1.0; python_version < \"3.14\""]
 
 [project.urls]
 Homepage = "https://github.com/OWNER/skinflint"

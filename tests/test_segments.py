@@ -320,3 +320,125 @@ def test_fixture_chars_cover_body(name):
     total = sum(s.chars for s in segs)
     raw = len(json.dumps({k: body[k] for k in ("tools", "system", "messages") if k in body}))
     assert 0.8 * raw < total <= raw
+
+
+def _sha(block) -> str:
+    import hashlib
+
+    return hashlib.sha256(canonical(block).encode()).hexdigest()[:16]
+
+
+def test_anthropic_tool_result_media_split():
+    image = {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/png", "data": "A" * 400_000},
+    }
+    pdf = {"type": "document", "source": {"type": "base64", "data": "B" * 200_000}}
+    body = {
+        "messages": [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "t1",
+                        "name": "Read",
+                        "input": {"file_path": "a.png"},
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "t1",
+                        "content": [{"type": "text", "text": "x" * 350}, image, pdf],
+                        "cache_control": {"type": "ephemeral", "ttl": "1h"},
+                    }
+                ],
+            },
+        ]
+    }
+    segs = segment(*A, body)
+    assert [(s.kind, s.label, s.group, s.message) for s in segs[1:]] == [
+        ("tool_result", "Read", "tool results: Read", 1),
+        ("image", "tool_result:Read image", "images", 1),
+        ("document", "tool_result:Read document", "documents", 1),
+    ]
+    assert segs[2].hash == _sha(image) and segs[3].hash == _sha(pdf)
+    assert segs[1].chars < 500
+    assert [s.breakpoint for s in segs] == [False, False, False, True]
+    assert segs[3].ttl == "1h"
+    calibrate(segs, 3400)
+    assert segs[2].est_tokens == 1600  # images are fixed; documents scale with size
+    assert segs[3].est_tokens > segs[1].est_tokens
+    assert sum(s.est_tokens for s in segs) == 3400
+    # The text segment's hash does not depend on the image bytes.
+    body["messages"][1]["content"][0]["content"][1] = {**image, "source": {"data": "C"}}
+    again = segment(*A, body)
+    assert again[1].hash == segs[1].hash and again[2].hash != segs[2].hash
+
+
+def test_openai_media_in_tool_results():
+    data_uri = "data:image/png;base64," + "A" * 300_000
+    chat = {
+        "messages": [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "type": "function", "function": {"name": "screenshot"}}
+                ],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "c1",
+                "content": [
+                    {"type": "text", "text": "ok"},
+                    {"type": "image_url", "image_url": {"url": data_uri}},
+                ],
+            },
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": data_uri}}]},
+        ]
+    }
+    segs = segment(Provider.OPENAI, Endpoint.CHAT, chat)
+    assert [(s.kind, s.label, s.group) for s in segs] == [
+        ("tool_use", "screenshot", "tool calls"),
+        ("tool_result", "screenshot", "tool results: screenshot"),
+        ("image", "tool_result:screenshot image", "images"),
+        ("image", "image", "images"),
+    ]
+    assert segs[2].hash == segs[3].hash == _sha(chat["messages"][2]["content"][0])
+    calibrate(segs, 3300)
+    assert segs[2].est_tokens == segs[3].est_tokens == 1600
+
+    responses = {
+        "input": [
+            {"type": "function_call", "call_id": "k", "name": "view_image", "arguments": "{}"},
+            {
+                "type": "function_call_output",
+                "call_id": "k",
+                "output": [
+                    {"type": "input_image", "image_url": data_uri},
+                    {"type": "input_file", "file_data": "Z" * 1000},
+                ],
+            },
+            {"role": "user", "content": [{"type": "input_image", "image_url": data_uri}]},
+        ]
+    }
+    segs = segment(Provider.OPENAI, Endpoint.RESPONSES, responses)
+    assert [(s.kind, s.label) for s in segs] == [
+        ("tool_use", "view_image"),
+        ("tool_result", "view_image"),
+        ("image", "tool_result:view_image image"),
+        ("document", "tool_result:view_image document"),
+        ("image", "image"),
+    ]
+    assert segs[1].chars < 200
+    string_output = segment(
+        Provider.OPENAI,
+        Endpoint.RESPONSES,
+        {"input": [{"type": "function_call_output", "call_id": "z", "output": "plain"}]},
+    )
+    assert [s.kind for s in string_output] == ["tool_result"]

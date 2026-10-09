@@ -36,7 +36,17 @@ CHARS_PER_TOKEN = {
     "other": 3.5,
 }
 PROSE_CHARS_PER_TOKEN = 4.0
+# Images cost a bounded number of tokens whatever their encoded size. Documents scale with
+# their content, so they are estimated from size like everything else.
 FIXED_TOKENS = {"image": IMAGE_TOKENS}
+_MEDIA = {
+    "image": "image",
+    "image_url": "image",
+    "input_image": "image",
+    "document": "document",
+    "file": "document",
+    "input_file": "document",
+}
 
 _REMINDER_PREFIXES = ("<system-reminder>", "<environment_context>", "<user_instructions>")
 _INSTRUCTION_FILE = re.compile(r"Contents of ([^\n]*?\.(?:md|mdc))(?=[\s:(]|$)")
@@ -219,7 +229,7 @@ def _anthropic(body: dict) -> list[Segment]:
         for block in _as_list(content):
             if not isinstance(block, dict):
                 block = {"type": "text", "text": str(block)}
-            segs.append(_anthropic_block(role, block, mi, tool_names))
+            segs.extend(_anthropic_block(role, block, mi, tool_names))
 
     auto = body.get("cache_control")
     if isinstance(auto, dict) and segs and not segs[-1].breakpoint:
@@ -228,7 +238,34 @@ def _anthropic(body: dict) -> list[Segment]:
     return segs
 
 
-def _anthropic_block(role: Any, block: dict, mi: int, tool_names: dict[str, str]) -> Segment:
+def _split_media(
+    block: dict, key: str, section: str, kind: str, name: str, group: str, mi: int
+) -> list[Segment]:
+    """A tool result as its text segment followed by one fixed-size segment per image/file.
+
+    The breakpoint of the enclosing block moves to the last segment emitted for it.
+    """
+    content = block.get(key)
+    if not isinstance(content, list):
+        return [_make(section, kind, name, group, block, mi)]
+    rest, media = [], []
+    for part in content:
+        mkind = _MEDIA.get(part.get("type")) if isinstance(part, dict) else None
+        (media if mkind else rest).append(part)
+    if not media:
+        return [_make(section, kind, name, group, block, mi)]
+    segs = [_make(section, kind, name, group, {**block, key: rest}, mi)]
+    for part in media:
+        mkind = _MEDIA[part["type"]]
+        segs.append(_make(section, mkind, f"tool_result:{name} {mkind}", f"{mkind}s", part, mi))
+    head = segs[0]
+    if head.breakpoint:
+        segs[-1].breakpoint, segs[-1].ttl = True, head.ttl
+        head.breakpoint, head.ttl = False, None
+    return segs
+
+
+def _anthropic_block(role: Any, block: dict, mi: int, tool_names: dict[str, str]) -> list[Segment]:
     btype = block.get("type")
     if btype == "text":
         text = block.get("text") or ""
@@ -249,14 +286,18 @@ def _anthropic_block(role: Any, block: dict, mi: int, tool_names: dict[str, str]
         name = tool_names.get(str(block.get("tool_use_id")))
         if name is None:
             name = btype.removesuffix("_tool_result") if btype != "tool_result" else "unknown"
-        kind, label, group = "tool_result", name, f"tool results: {name}"
+        return _split_media(
+            block, "content", "messages", "tool_result", name, f"tool results: {name}", mi
+        )
     elif btype == "image":
         kind, label, group = "image", "image", "images"
-    elif btype in ("document", "search_result"):
+    elif btype == "document":
         kind, label, group = "document", str(block.get("title") or btype), "documents"
+    elif btype == "search_result":
+        kind, label, group = "other", str(block.get("title") or btype), "documents"
     else:
         kind, label, group = "other", str(btype or "block"), "other"
-    return _make("messages", kind, label, group, block, mi)
+    return [_make("messages", kind, label, group, block, mi)]
 
 
 # OpenAI
@@ -303,7 +344,11 @@ def _chat(body: dict) -> list[Segment]:
         if role in ("tool", "function"):
             call_id = str(msg.get("tool_call_id") or "")
             name = tool_names.get(call_id) or str(msg.get("name") or "unknown")
-            segs.append(_make("messages", "tool_result", name, f"tool results: {name}", msg, mi))
+            segs.extend(
+                _split_media(
+                    msg, "content", "messages", "tool_result", name, f"tool results: {name}", mi
+                )
+            )
             continue
         for part in _as_list(parts):
             segs.append(_openai_part(role, part, mi))
@@ -338,9 +383,9 @@ def _openai_part(role: str, part: Any, mi: int) -> Segment:
     if ptype == "refusal":
         return _make("messages", "assistant_text", "refusal", "assistant text", block, mi)
     if ptype in ("image_url", "input_image", "image"):
-        return _make("messages", "image", "image", "images", block, mi)
+        return _make("messages", "image", "image", "images", part, mi)
     if ptype in ("file", "input_file"):
-        return _make("messages", "document", "file", "documents", block, mi)
+        return _make("messages", "document", "file", "documents", part, mi)
     return _make("messages", "other", str(ptype), "other", block, mi)
 
 
@@ -386,7 +431,11 @@ def _responses(body: dict) -> list[Segment]:
             segs.append(_make("messages", "tool_use", name, "tool calls", item, mi))
         elif itype.endswith("_call_output"):
             name = tool_names.get(str(item.get("call_id"))) or "unknown"
-            segs.append(_make("messages", "tool_result", name, f"tool results: {name}", item, mi))
+            segs.extend(
+                _split_media(
+                    item, "output", "messages", "tool_result", name, f"tool results: {name}", mi
+                )
+            )
         elif itype == "reasoning":
             segs.append(_make("messages", "thinking", "reasoning", "thinking", item, mi))
         elif itype.endswith("_call"):

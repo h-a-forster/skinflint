@@ -143,3 +143,16 @@ def test_diff_changed_and_removed():
     assert d.changed[0].delta > 0
     assert [c.label for c in d.removed] == ["ArtifactData"]
     assert d.to_dict()["removed"][0]["delta"] < 0
+
+
+def test_request_profile_image_in_tool_result_is_fixed():
+    body = load("tool_turn")
+    body["messages"][2]["content"][0]["content"] = [
+        {"type": "text", "text": "notes"},
+        {"type": "image", "source": {"type": "base64", "data": "A" * 2_000_000}},
+    ]
+    s = segment(Provider.ANTHROPIC, Endpoint.MESSAGES, body)
+    p = request_profile(s, Usage(input_tokens=8, cache_write_1h=1974, cache_read=57_835), PRICE)
+    groups = {g.group: g for g in p.groups}
+    assert groups["images"].tokens == 1600
+    assert groups["tools: built-in"].tokens > 40_000
