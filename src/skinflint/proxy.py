@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import os
@@ -225,14 +226,15 @@ class Proxy:
         provider = adapter.provider
         started = time.time()
         try:
-            data, info, fp = await asyncio.to_thread(prepare, adapter, endpoint, raw)
+            data, info, fp, thread = await asyncio.to_thread(prepare, adapter, endpoint, raw)
         except Exception as e:  # noqa: BLE001 - unparseable bodies go upstream untouched
             log.warning("could not parse %s request body (%s); forwarding unmetered", path, e)
             return await self.passthrough(request, provider, target, raw)
 
         headers = request.headers
         session = headers.get("x-skinflint-session") or adapter.session_hint(headers, data)
-        agent = headers.get("x-claude-code-agent-id") or ("fp:" + fp)
+        agent_id = headers.get("x-claude-code-agent-id")
+        agent = agent_id or ("fp:" + fp)
         record = Record(
             ts=started,
             provider=provider,
@@ -272,7 +274,11 @@ class Proxy:
             self.profile(provider, endpoint, data),
             raw if self.cfg.store_bodies else None,
         )
-        conversation = (session, agent) if session else None
+        # The conversation a cache-diagnostics comparison runs against. The first message
+        # identifies it: it survives tool and system changes (which are what we want the API
+        # to report) but differs for side requests and subagents in the same session.
+        conversation = (session, agent_id or thread or agent) if session else None
+        call.conversation = conversation
         try:
             return await self.forward(
                 call, adapter, endpoint, target, raw, data, info, conversation
@@ -410,6 +416,7 @@ class Call:
         self.body = body
         self.ttft: float | None = None
         self.settled = False
+        self.conversation: tuple[str, str] | None = None
 
     def relay_bytes(self, upstream: aiohttp.ClientResponse, data: bytes) -> web.Response:
         """A non-2xx upstream answer, passed through unchanged."""
@@ -537,8 +544,8 @@ class Call:
             log.warning("could not price %s: %s", rec.model, e)
         rec.reserved_usd = 0.0
         rec.reserved_tokens = 0
-        if state is State.OK and rec.session:
-            proxy.remember((rec.session, rec.agent), upstream_id)
+        if state is State.OK:
+            proxy.remember(self.conversation, upstream_id)
         self.segs.add_done_callback(self.write)
         log_record(rec)
 
@@ -562,14 +569,20 @@ class Call:
 
 def prepare(
     adapter: Adapter, endpoint: Endpoint, raw: bytes
-) -> tuple[dict[str, Any], RequestInfo, str]:
-    """Parse a metered request body and fingerprint its agent (CPU-bound; off the loop)."""
+) -> tuple[dict[str, Any], RequestInfo, str, str | None]:
+    """Parse a metered request body; fingerprint its agent and hash its first message
+    (CPU-bound; runs off the event loop)."""
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("body is not a JSON object")
     info = adapter.parse_request(endpoint, data)
     head = segments.segment(adapter.provider, endpoint, agent_head(endpoint, data))
-    return data, info, segments.fingerprint(head)
+    messages = data.get("messages")
+    thread = None
+    if isinstance(messages, list) and messages:
+        digest = hashlib.sha256(segments.canonical(messages[0]).encode()).hexdigest()
+        thread = "m:" + digest[:16]
+    return data, info, segments.fingerprint(head), thread
 
 
 def agent_head(endpoint: Endpoint, data: dict[str, Any]) -> dict[str, Any]:

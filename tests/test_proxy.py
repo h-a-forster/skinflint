@@ -871,3 +871,22 @@ async def test_chatgpt_account_marks_plan_traffic(h):
     await resp.read()
     (rec,) = await h.records()
     assert rec.plan is True
+
+
+async def test_diagnostics_follow_the_conversation_across_tool_changes(h, first_party):
+    # No agent header (plain Claude Code main agent): turns are linked by their first
+    # message, so a tool change mid-session is compared (and reported by the API), while a
+    # side request with a different first message starts its own chain.
+    headers = {"x-claude-code-session-id": "S"}
+
+    async def send(body: dict) -> dict:
+        await (await h.messages(body, headers=headers)).read()
+        await h.records()
+        return h.fake.requests[-1].json()["diagnostics"]
+
+    assert await send(msg_body()) == {"previous_message_id": None}
+    fewer_tools = msg_body(tools=[])
+    assert await send(fewer_tools) == {"previous_message_id": "msg_0001"}
+    side = msg_body(messages=[{"role": "user", "content": "summarise the session"}])
+    assert await send(side) == {"previous_message_id": None}
+    assert await send(msg_body()) == {"previous_message_id": "msg_0002"}
