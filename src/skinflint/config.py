@@ -5,10 +5,8 @@ A typo in a budget rule must not silently disable a cap, so unknown keys are err
 
 from __future__ import annotations
 
-import ipaddress
 import math
 import os
-import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -98,6 +96,8 @@ class Config:
 
     @property
     def is_loopback(self) -> bool:
+        import ipaddress
+
         if self.host == "localhost":
             return True
         try:
@@ -114,6 +114,8 @@ def load(path: Path | None = None) -> Config:
         if explicit:
             raise ConfigError(f"config file not found: {path}")
         return Config()
+    import tomllib  # deferred: keeps `skinflint statusline` start-up fast
+
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as e:
