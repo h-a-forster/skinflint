@@ -20,6 +20,7 @@ from skinflint.providers.base import (
     headers_with_prefix,
     load_json,
     output_chars,
+    server_inputs,
     web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
@@ -241,9 +242,19 @@ class OpenAIAdapter:
             if max_out is None:
                 max_out = as_int(body.get("max_tokens"))
             prompt = (body.get("tools"), body.get("functions"), body.get("messages"))
+            choices = as_int(body.get("n")) or 1
         else:
             max_out = as_int(body.get("max_output_tokens"))
-            prompt = (body.get("tools"), body.get("instructions"), body.get("input"))
+            # A stored prompt ({"id": ...}) adds server-held content; its variables are sent.
+            prompt = (
+                body.get("tools"),
+                body.get("instructions"),
+                body.get("input"),
+                body.get("prompt"),
+            )
+            choices = 1
+        _images, document = server_inputs(*prompt)
+        stored_prompt = as_str(as_dict(body.get("prompt")).get("id")) is not None
         return RequestInfo(
             provider=self.provider,
             endpoint=endpoint,
@@ -255,7 +266,8 @@ class OpenAIAdapter:
             service_tier=as_str(body.get("service_tier")),
             web_searches=web_search_cap(body.get("tools"), ("web_search",)),
             previous_response_id=as_str(body.get("previous_response_id")),
-            server_context=body.get("conversation") is not None,
+            server_context=body.get("conversation") is not None or stored_prompt or document,
+            choices=choices,
         )
 
     def rewrite_request(

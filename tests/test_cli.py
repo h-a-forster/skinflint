@@ -421,9 +421,20 @@ async def test_run_cap_blocks(home, upstream, capsys):
 def test_child_env():
     base = "http://127.0.0.1:5000/s/job"
     env = cli.child_env({"PYTHONHOME": sys.base_prefix, "KEEP": "1"}, base)
-    assert env == {"KEEP": "1", "ANTHROPIC_BASE_URL": base, "OPENAI_BASE_URL": base + "/v1"}
+    assert env == {
+        "KEEP": "1",
+        "ANTHROPIC_BASE_URL": base,
+        "OPENAI_BASE_URL": base + "/v1",
+        "ENABLE_TOOL_SEARCH": "true",
+    }
     other = cli.child_env({"PYTHONHOME": "/opt/python"}, base)
     assert other["PYTHONHOME"] == "/opt/python"
+
+
+@pytest.mark.parametrize("value", ["false", "auto", ""])
+def test_child_env_keeps_tool_search_setting(value):
+    env = cli.child_env({"ENABLE_TOOL_SEARCH": value}, "http://127.0.0.1:5000")
+    assert env["ENABLE_TOOL_SEARCH"] == value
 
 
 def test_run_usage(capsys, home):

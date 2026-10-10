@@ -21,6 +21,7 @@ from skinflint.providers.base import (
     headers_with_prefix,
     load_json,
     output_chars,
+    server_inputs,
     web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
@@ -203,6 +204,7 @@ class AnthropicAdapter:
             service_tier=as_str(body.get("service_tier")),
             inference_geo=as_str(body.get("inference_geo")),
             web_searches=web_search_cap(body.get("tools"), ("web_search",)),
+            server_context=server_inputs(*prompt)[1],
         )
 
     def rewrite_request(

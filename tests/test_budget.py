@@ -267,6 +267,15 @@ def test_worst_case_server_held_prompt(store, clock):
     assert req(server_context=True) == 100 + SERVER_CONTEXT_TOKENS
 
 
+def test_worst_case_reserves_output_per_choice(store, clock):
+    worst = make(store, clock, reserve="worst_case")
+    req = info(prompt=100, max_out=1000)
+    req.choices = 3
+    assert worst.reservation(req)[1] == 100 + 3 * 1000
+    req.max_output_tokens = None
+    assert worst.reservation(req)[1] == 100 + 3 * DEFAULT_MAX_OUTPUT
+
+
 def test_worst_case_web_searches(store, clock):
     seen = []
 

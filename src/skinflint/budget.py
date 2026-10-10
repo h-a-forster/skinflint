@@ -207,7 +207,7 @@ class Budget:
             prompt = max(info.max_prompt_tokens, info.est_prompt_tokens, 0)
             prompt += self._server_context(info, txn)
             out = info.max_output_tokens
-            out = DEFAULT_MAX_OUTPUT if out is None else out
+            out = (DEFAULT_MAX_OUTPUT if out is None else out) * max(info.choices, 1)
             searches = info.web_searches
             usd = self.pricing.max_cost(
                 info.provider,
@@ -225,7 +225,8 @@ class Budget:
 
     @staticmethod
     def _server_context(info: RequestInfo, txn: Txn | None) -> int:
-        """Tokens of a prompt the provider holds (previous_response_id, conversation)."""
+        """Tokens of a prompt the provider holds (previous_response_id, conversation, a
+        stored prompt template, a document sent by file id or URL)."""
         if info.server_context:
             return SERVER_CONTEXT_TOKENS
         if info.previous_response_id is None:

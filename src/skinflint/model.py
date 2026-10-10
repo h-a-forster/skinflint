@@ -147,7 +147,8 @@ class RequestInfo:
     inference_geo: str | None = None  # Anthropic "inference_geo"; None may be a "us" default
     web_searches: int | None = 0  # most server-side web searches allowed; None = no cap set
     previous_response_id: str | None = None  # OpenAI: prompt continues a server-held one
-    server_context: bool = False  # OpenAI "conversation": prompt includes server-held items
+    server_context: bool = False  # prompt includes server-held items of unknown size
+    choices: int = 1  # OpenAI Chat "n": completions generated, each up to max_output_tokens
 
 
 @dataclass(slots=True)

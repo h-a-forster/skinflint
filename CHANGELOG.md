@@ -7,8 +7,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+
+- `skinflint run` sets `ENABLE_TOOL_SEARCH=true` in the child's environment unless the
+  variable is already set (any value, including empty, is kept).
+
 ### Fixed
 
+- `reserve = "worst_case"` now also reserves output `n` times for OpenAI Chat `n`, counts
+  images sent by URL or file id at 5,000 tokens, and reserves a full context window for
+  documents and files sent by URL or file id and for OpenAI Responses stored prompt templates.
 - `reserve = "worst_case"` could under-reserve. It now prices fast mode, `inference_geo`,
   OpenAI service tiers (the dearest one when the request leaves the tier unset or `auto`,
   since a project default can select priority), web search fees (`max_uses`, 50 searches
@@ -27,6 +35,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Docs
 
 - README wording on provider limits and request forwarding.
+- Corrected the worst-case premise: the measured reservations fit 128,000 output tokens, not
+  32,000. The `reserve = "estimate"` overshoot bound is now $2.56 per in-flight request on
+  Opus 5.5.
+- Corrected the tokenizer note: newer tokenizers gave fewer tokens than Haiku 4.5, not more.
+- The tool search effect was measured through skinflint only; the docs no longer say "any
+  proxy".
 - Quantified how far `reserve = "estimate"` can overshoot.
 - Results from live runs on 2026-10-10: Claude Code's fixed context on three versions, caps
   under 4-8 parallel agents with killed clients, and nine cache breakers checked against the

@@ -13,9 +13,10 @@ from skinflint.model import Endpoint, Provider, RequestInfo, Usage
 
 CHARS_PER_TOKEN = 4
 MEDIA_CHARS = 1600 * CHARS_PER_TOKEN  # an image or other base64 payload counts as ~1.6k tokens
-# The worst-case bound. 4 chars per token runs ~7% low on Haiku 4.5 and newer tokenizers
-# produce more tokens for the same text, so the bound assumes 2.5 chars per token and
-# high-resolution images (~4.8k tokens each).
+# The worst-case bound. 4 chars per token runs ~7% low on Haiku 4.5's tokenizer (the newer
+# Sonnet 5.5 / Opus 5.5 tokenizer produced fewer tokens for the same request in our
+# measurements); the bound still assumes 2.5 chars per token, leaving room for a tokenizer
+# ~35% hungrier than Haiku 4.5's, and high-resolution images (~4.8k tokens each).
 BOUND_CHARS_PER_TOKEN = 2.5
 BOUND_MEDIA_TOKENS = 5000
 # Output of a stream that ended before its final usage: generated text, code and JSON run
@@ -175,11 +176,65 @@ def estimate_tokens(*parts: Any) -> int:
 
 
 def bound_tokens(*parts: Any) -> int:
-    """A conservative prompt size for the worst-case reservation (see BOUND_CHARS_PER_TOKEN).
-    Base64 documents (PDFs) are counted like one image, so a many-page PDF can exceed it."""
+    """A conservative prompt size for the worst-case reservation (see BOUND_CHARS_PER_TOKEN),
+    with images sent by reference counted as BOUND_MEDIA_TOKENS each. Base64 documents (PDFs)
+    are counted like one image, so a many-page PDF can exceed it; documents sent by reference
+    are not counted here (see server_inputs)."""
     media = int(BOUND_MEDIA_TOKENS * BOUND_CHARS_PER_TOKEN)
     chars = sum(text_chars(p, media) for p in parts if p is not None)
-    return math.ceil(chars / BOUND_CHARS_PER_TOKEN)
+    images, _document = server_inputs(*parts)
+    return math.ceil(chars / BOUND_CHARS_PER_TOKEN) + images * BOUND_MEDIA_TOKENS
+
+
+def _remote(url: Any) -> bool:
+    return isinstance(url, str) and bool(url) and not url.startswith("data:")
+
+
+def server_inputs(*parts: Any) -> tuple[int, bool]:
+    """Inputs the body names by reference instead of carrying: (images, any document). An
+    image by URL or file id is counted as one high-resolution image (BOUND_MEDIA_TOKENS);
+    a document or file by URL or file id has no size we can see, so it is unbounded.
+
+    Anthropic: image / document blocks whose ``source.type`` is ``url`` or ``file``.
+    OpenAI Chat: ``image_url`` parts with a non-data URL, ``file`` parts with a ``file_id``.
+    OpenAI Responses: ``input_image`` with ``image_url`` or ``file_id``, ``input_file`` with
+    ``file_id`` or ``file_url``."""
+    images, document = 0, False
+    stack = list(parts)
+    while stack:
+        o = stack.pop()
+        if isinstance(o, list):
+            stack.extend(o)
+            continue
+        if not isinstance(o, dict):
+            continue
+        kind = o.get("type")
+        if kind in ("image", "document"):
+            source = as_dict(o.get("source"))
+            if source.get("type") in ("url", "file"):
+                if kind == "image":
+                    images += 1
+                else:
+                    document = True
+                continue
+        elif kind == "image_url":
+            if _remote(as_dict(o.get("image_url")).get("url")):
+                images += 1
+                continue
+        elif kind == "file":
+            if as_str(as_dict(o.get("file")).get("file_id")):
+                document = True
+                continue
+        elif kind == "input_image":
+            if as_str(o.get("file_id")) or _remote(o.get("image_url")):
+                images += 1
+                continue
+        elif kind == "input_file":
+            if as_str(o.get("file_id")) or as_str(o.get("file_url")):
+                document = True
+                continue
+        stack.extend(o.values())
+    return images, document
 
 
 def web_search_cap(tools: Any, prefixes: tuple[str, ...]) -> int | None:

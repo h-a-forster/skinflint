@@ -8,7 +8,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS, client_name, detect
 from skinflint.providers.anthropic import AnthropicAdapter
-from skinflint.providers.base import estimate_unfinished, output_chars
+from skinflint.providers.base import BOUND_MEDIA_TOKENS, estimate_unfinished, output_chars
 
 CC = Path(__file__).parent / "fixtures" / "claude_code"
 SESSION = "11111111-2222-3333-4444-555555555555"
@@ -494,3 +494,21 @@ def test_unfinished_input_fallback_uses_the_bound():
     assert info.max_prompt_tokens > info.est_prompt_tokens
     assert estimate_unfinished(Usage(), 0, bound).input_tokens == bound
     assert estimate_unfinished(Usage(input_tokens=5), 0, bound) is None
+
+
+@pytest.mark.parametrize(
+    ("block", "image", "document"),
+    [
+        ({"type": "image", "source": {"type": "url", "url": "https://x/a.png"}}, 1, False),
+        ({"type": "image", "source": {"type": "file", "file_id": "file_1"}}, 1, False),
+        ({"type": "document", "source": {"type": "url", "url": "https://x/a.pdf"}}, 0, True),
+        ({"type": "document", "source": {"type": "file", "file_id": "file_1"}}, 0, True),
+        ({"type": "document", "source": {"type": "text", "data": "hi"}}, 0, False),
+        ({"type": "text", "text": "hi"}, 0, False),
+    ],
+)
+def test_parse_request_inputs_by_reference(block, image, document):
+    body = {"model": "m", "max_tokens": 1, "messages": [{"role": "user", "content": [block]}]}
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert info.server_context is document
+    assert (info.max_prompt_tokens >= BOUND_MEDIA_TOKENS) is bool(image)

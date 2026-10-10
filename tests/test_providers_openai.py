@@ -7,6 +7,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS
+from skinflint.providers.base import BOUND_MEDIA_TOKENS
 from skinflint.providers.openai import OpenAIAdapter, openai_usage
 
 FX = Path(__file__).parent / "fixtures" / "openai"
@@ -398,3 +399,49 @@ def test_parse_request_worst_case_hints():
     assert info.max_prompt_tokens >= info.est_prompt_tokens
     info = adapter.parse_request(Endpoint.RESPONSES, {"model": "m", "conversation": "conv_1"})
     assert info.server_context and info.previous_response_id is None
+
+
+def test_parse_request_chat_n():
+    adapter = OpenAIAdapter()
+    body = {"model": "gpt-5.5", "messages": [], "max_completion_tokens": 100, "n": 4}
+    assert adapter.parse_request(Endpoint.CHAT, body).choices == 4
+    for n in (None, 0, -2, "3", True):
+        body["n"] = n
+        assert adapter.parse_request(Endpoint.CHAT, body).choices == 1
+    assert adapter.parse_request(Endpoint.RESPONSES, {"model": "m", "n": 4}).choices == 1
+
+
+def test_parse_request_stored_prompt_is_server_held():
+    adapter = OpenAIAdapter()
+    body = {"model": "m", "prompt": {"id": "pmpt_1", "variables": {"city": "x" * 400}}}
+    info = adapter.parse_request(Endpoint.RESPONSES, body)
+    assert info.server_context
+    assert info.max_prompt_tokens >= 160  # the variables are counted
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "part", "image", "document"),
+    [
+        (Endpoint.CHAT, {"type": "image_url", "image_url": {"url": "https://x/a.png"}}, 1, False),
+        (
+            Endpoint.CHAT,
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA"}},
+            0,
+            False,
+        ),
+        (Endpoint.CHAT, {"type": "file", "file": {"file_id": "file_1"}}, 0, True),
+        (Endpoint.RESPONSES, {"type": "input_image", "image_url": "https://x/a.png"}, 1, False),
+        (Endpoint.RESPONSES, {"type": "input_image", "file_id": "file_1"}, 1, False),
+        (Endpoint.RESPONSES, {"type": "input_file", "file_id": "file_1"}, 0, True),
+        (Endpoint.RESPONSES, {"type": "input_file", "file_url": "https://x/a.pdf"}, 0, True),
+        (Endpoint.RESPONSES, {"type": "input_text", "text": "hi"}, 0, False),
+    ],
+)
+def test_parse_request_inputs_by_reference(endpoint, part, image, document):
+    adapter = OpenAIAdapter()
+    key = "messages" if endpoint is Endpoint.CHAT else "input"
+    body = {"model": "m", key: [{"role": "user", "content": [part]}]}
+    info = adapter.parse_request(endpoint, body)
+    plain = adapter.parse_request(endpoint, {"model": "m", key: []})
+    assert info.server_context is document
+    assert (info.max_prompt_tokens - plain.max_prompt_tokens >= BOUND_MEDIA_TOKENS) is bool(image)

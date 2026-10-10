@@ -142,10 +142,13 @@ so this also holds across several skinflint processes sharing one ledger.
 - `reserve = "estimate"` (default) holds the estimated prompt cost at the uncached input
   rate. A request is admitted while spend plus reservations stays under the cap. Requests
   already in flight still finish, so each one can overshoot the cap by what its reservation
-  left out: up to `max_tokens` of output, plus the cache-write premium on its prompt. Claude
-  Code asks for `max_tokens = 32000`, so on Claude Opus 5.5 ($20/MTok output) each in-flight
-  request can overshoot by up to $0.64, $1.28 in fast mode, $1.41 in fast mode with
-  `inference_geo: "us"`. A 100k-token prompt written to the 1-hour cache adds $0.40 more.
+  left out: up to `max_tokens` of output, plus the cache-write premium on its prompt. The
+  measured `worst_case` reservations for Claude Code ($1.57 on Sonnet 5.5, $3.13 on Opus
+  5.5) only fit 128,000 output tokens, so Claude Code 2.1.296 sent either no `max_tokens` or
+  `max_tokens = 128000`. On Claude Opus 5.5 ($20/MTok output) each in-flight request can then
+  overshoot by up to $2.56, $5.12 in fast mode, $5.63 in fast mode with `inference_geo: "us"`.
+  On Sonnet 5.5 ($10/MTok) it is $1.28. A 100k-token prompt written to the 1-hour cache adds
+  $0.40 more on Opus 5.5.
   Parallel subagents multiply this: five in flight at the moment the cap is reached can
   overshoot it by five times as much.
 - `reserve = "worst_case"` holds the most the request could be billed from what its body
@@ -153,9 +156,12 @@ so this also holds across several skinflint processes sharing one ledger.
   reserve a lot. The bound prices:
   - every prompt token at the dearest input-side rate (uncached, 5-minute or 1-hour cache
     write), with the prompt sized at 2.5 characters per token and 5,000 tokens per image
-    (the plain estimate uses 4 characters per token, which runs about 7% low on Claude
-    Haiku 4.5 and lower on newer tokenizers);
-  - `max_tokens` / `max_output_tokens` of output, or 128,000 when the request sets none;
+    (images sent by URL or file id included). The plain estimate uses 4 characters per
+    token, which runs about 7% low on Claude Haiku 4.5. Newer tokenizers gave fewer tokens
+    for the same request, so it runs less low there. The bound leaves room for a tokenizer
+    about 35% hungrier than Haiku 4.5's;
+  - `max_tokens` / `max_output_tokens` of output, or 128,000 when the request sets none,
+    times `n` for an OpenAI Chat request that sets `n`;
   - fast mode (`speed: "fast"`), `inference_geo` and the service tier as the request sets
     them. A request that leaves `inference_geo` or the OpenAI `service_tier` unset (or
     `"auto"`) is priced at the dearest option, because a workspace or project default can
@@ -164,12 +170,16 @@ so this also holds across several skinflint processes sharing one ledger.
     sets no `max_uses`;
   - for an OpenAI Responses request that continues a stored one, the prompt behind
     `previous_response_id` (the earlier response's tokens, from the ledger) or, when that
-    response is not in the ledger or the request uses `conversation`, 1,050,000 tokens.
+    response is not in the ledger or the request uses `conversation`, 1,050,000 tokens;
+  - for inputs with no visible size, 1,050,000 tokens (the largest context window): documents
+    and files sent by URL or file id (Anthropic `document` sources of type `url` or `file`,
+    OpenAI Chat `file` parts with `file_id`, Responses `input_file` with `file_id` or
+    `file_url`) and OpenAI Responses stored prompt templates (`prompt: {"id": ...}`).
 
   What it cannot bound: input that server-side tools add during the request (web search
   results, fetched pages and code execution output are billed as input tokens), more than
-  50 searches from an uncapped web search tool, base64 PDFs (counted as one image), and
-  price changes not yet in the bundled table.
+  50 searches from an uncapped web search tool, base64 documents (a multi-page PDF counts as
+  one image), and price changes not yet in the bundled table.
 
 When a request finishes, its reservation is replaced by its real cost. Reservations left by a
 crashed process stop counting after 15 minutes.

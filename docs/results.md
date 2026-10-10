@@ -9,8 +9,10 @@ sections 6-9 on 2026-10-10 on Linux, with raw data and scripts in
 **Correction (2026-10-10).** Behind a custom `ANTHROPIC_BASE_URL`, Claude Code turns tool
 search off and sends every tool definition in full. All of sections 1-3 were measured that
 way. Sent to the API directly, the same one-word request is about 40% smaller: 21,266 prompt
-tokens on Claude Code 2.1.287 instead of 35,966 (Linux, no connectors). Set
-`ENABLE_TOOL_SEARCH=true` to get the direct behaviour through skinflint. See section 6.
+tokens on Claude Code 2.1.287, against 35,442 and 35,611 (two runs) through skinflint with
+the default settings (Linux, no connectors). Set `ENABLE_TOOL_SEARCH=true` to get the direct
+behaviour through skinflint. `skinflint run` now sets it unless it is already set. See
+section 6.
 
 ## Setup
 
@@ -201,21 +203,24 @@ Setup for sections 6-9:
 | Ledger | a fresh `SKINFLINT_HOME` per run |
 
 Prompt: `claude -p "Reply with exactly: hi" --model claude-haiku-4-5`. The table shows the
-largest request of each run. Two runs per cell; the prompt size was identical in both, except
-2.1.287 without MCP (35,442 and 35,611). "Direct" is the prompt Claude Code reported when
-talking to `api.anthropic.com` without the proxy, summed over its calls.
+largest request of each run (each run sent one). Two runs per cell; the prompt size was
+identical in both, except 2.1.287 without MCP (35,442-35,611; the cold cost is for the 35,442
+run). "Direct" is the prompt Claude Code reported when talking to `api.anthropic.com` without
+the proxy, summed over its calls.
 
 | Version | MCP | Direct, tool search default | Through skinflint, default | Through skinflint, `ENABLE_TOOL_SEARCH=true` | Cold cost, default / `true` |
 |---|---|---:|---:|---:|---:|
 | 2.1.250 | none | 20,618 | 35,228 | 20,455 | $0.0705 / $0.0409 |
 | 2.1.250 | 4 servers | 21,451 | 42,272 | 21,288 | $0.0845 / $0.0426 |
-| 2.1.287 | none | 21,266 | 35,442 | 21,001 | $0.0709 / $0.0420 |
+| 2.1.287 | none | 21,266 | 35,442-35,611 | 21,001 | $0.0709 / $0.0420 |
 | 2.1.287 | 4 servers | 22,112 | 43,030 | 21,847 | $0.0861 / $0.0437 |
 | 2.1.296 | none | 21,593 | 35,995 | 21,328 | $0.0720 / $0.0427 |
 | 2.1.296 | 4 servers | 22,439 | 43,586 | 22,174 | $0.0872 / $0.0443 |
 
 Cold cost is the prompt written to the 1-hour cache at Haiku 4.5's $2/MTok. Direct runs with
-`ENABLE_TOOL_SEARCH=false` sent 35,391 to 43,941 tokens, the same as the proxied default.
+`ENABLE_TOOL_SEARCH=false` sent 35,391 to 43,941 tokens. That is close to the proxied default
+but 163-524 tokens higher: 163 on 2.1.250, 355 on 2.1.296 and on 2.1.287 with MCP, and 524 on
+2.1.287 without MCP (against the 35,442 run). The cause is not established.
 
 Split of the 2.1.296 requests, from `skinflint profile`:
 
@@ -270,21 +275,33 @@ Findings:
   requests admitted in parallel. In r1 all four first requests were admitted at once: the
   estimate holds the prompt at the uncached input rate ($4/MTok on Opus 5.5), but each wrote
   32,800 tokens to the 1-hour cache at $8/MTok and cost $0.2635. The overshoot stayed far below
-  the documented bound ($0.64 per in-flight Opus request) because Claude Code's turns produced
-  a few hundred output tokens, not 32,000.
+  the documented bound ($2.56 per in-flight Opus 5.5 request: 128,000 output tokens at
+  $20/MTok, skinflint's default when a request sets no `max_tokens`) because Claude Code's
+  turns produced a few hundred output tokens, not 128,000.
 - It also stops early: a request is refused when its estimate does not fit, so four rounds
   ended 1-11% under the cap.
 - `reserve = "worst_case"` never went over. It reserved $1.57 per Claude Code request on
-  Sonnet 5.5 and $3.13 on Opus 5.5 (32,000 output tokens plus the prompt at the dearest rate),
-  against an actual $0.01-0.27 per request. A $1 cap therefore refused every first request.
+  Sonnet 5.5 and $3.13 on Opus 5.5, against an actual $0.01-0.27 per request. A $1 cap
+  therefore refused every first request.
   With a $5 cap, three requests filled the cap with reservations at the start, so three of
   six agents were refused on their first request; the round spent $1.56.
+- The reservations only fit 128,000 output tokens, so Claude Code 2.1.296 sent no
+  `max_tokens` or `max_tokens = 128000`. An unset `inference_geo` is priced at 1.1x. On Opus
+  5.5, 128,000 tokens at $22/MTok is $2.816, which leaves $0.31 for a prompt of about 36k
+  tokens at the 1-hour cache-write rate ($8/MTok x 1.1). On Sonnet 5.5, 128,000 at $11/MTok is
+  $1.408, which leaves $0.16 for about 37k tokens. With 32,000 output tokens the prompt bound
+  would have to be about 276k tokens.
 - The refusal message counts reservations as used: "$4.70 of $5.00 used this session" was
   $0 spent plus $4.70 reserved.
 - No agent retried a refused request. Claude Code printed the 402 and exited with
   `subtype: success`.
 
 ### Killed clients
+
+In the raw `capstress-*.json` files, `summary.killed` counts the agents selected for killing,
+not actual kills. The Killed column above counts agents actually killed (`agents[*].killed`):
+an agent selected for killing that ended before its kill point was not killed. In r4, four
+were selected and three killed.
 
 12 agents were killed mid-stream. Nine left a stream cut off at the proxy, which recorded it
 as `aborted` with output estimated from the streamed text. The other three had already
@@ -345,8 +362,9 @@ Findings:
   naming the switch. The API returned no diagnostics for it.
 - Changing the system prompt, `CLAUDE.md` or the git state between turns broke nothing: on
   `--resume`, Claude Code 2.1.296 kept the system prompt of the original session and added the
-  new `CLAUDE.md` content (109 tokens) after the cached prefix. A system-prompt break inside one
-  Claude Code session was therefore not reproducible from the command line.
+  new `CLAUDE.md` content after the cached prefix (about 100-135 tokens: turn 2 wrote 180-194
+  tokens against the control's 58-81). A system-prompt break inside one Claude Code session
+  was therefore not reproducible from the command line.
 - The API gave a reason in 6 trials, all `tools_changed`. skinflint's local verdict named the
   same change in 4. In the other 2 (MCP, second and third trial) it said `hit`, because
   28,250 tokens were read from the first trial's cache; 9.6k tokens were still re-written.
@@ -360,7 +378,11 @@ $10.107486 each; the largest difference for one run was 2e-16 dollars. Both appl
 prices to the usage the API returned, so this checks metering and pricing against Claude
 Code, not against a bill.
 
-Cost of these measurements: $12.98 API-equivalent, all subscription traffic.
+Cost of these measurements: about $13.02 API-equivalent, all subscription traffic.
+`spend.jsonl` records $14.04, which counts turn 1 of each resumed cache-breaker session twice,
+because `total_cost_usd` is cumulative on `--resume`. Subtracting the turn-1 costs of the 29
+trials in `cachebreak.json`, `cachebreak-extra.json` and `cachebreak-smoke.json` ($1.02) gives
+the figure.
 
 ## Reproduce
 
