@@ -1,0 +1,182 @@
+{"ts": 1791591248.4451811, "experiment": "probe", "usd": 0.00203446, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591248.4453428, "experiment": "probe", "usd": 0.0117079, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591248.4454558, "experiment": "probe", "usd": 0.00070664, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591248.4455097, "experiment": "probe", "usd": 0.0069394, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591248.4455478, "experiment": "probe", "usd": 0.0064486, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591248.4455845, "experiment": "probe", "usd": 0.003, "source": "total_cost_usd (0.003 = upper bound for the 404 capture run)"}
+{"ts": 1791591251.881856, "experiment": "overhead", "usd": 0.0722, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tsdefault-0", "session": "8ca69540-5ead-445d-88f2-c532ac35c0bf"}
+{"ts": 1791591254.0627012, "experiment": "overhead", "usd": 0.042856, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tstrue-0", "session": "f151fcf3-c2bf-497c-bf29-02333f9b324b"}
+{"ts": 1791591257.245386, "experiment": "overhead", "usd": 0.08735699999999999, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tsdefault-0", "session": "1c62fedc-dca6-48d1-a5bb-a80b9dc9fd70"}
+{"ts": 1791591260.4459734, "experiment": "overhead", "usd": 0.0225427, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tstrue-0", "session": "b0aa713d-81e5-4de7-a7a3-4752f5cba790"}
+{"ts": 1791591270.3416412, "experiment": "overhead", "usd": 0.07153799999999999, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tsdefault-0", "session": "21eed114-a376-4f60-a1c1-4409757d804f"}
+{"ts": 1791591272.503417, "experiment": "overhead", "usd": 0.021803500000000003, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tsdefault-1", "session": "246a8d3b-1c9a-43b1-8225-6974d4459313"}
+{"ts": 1791591278.7194495, "experiment": "overhead", "usd": 0.042032, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tstrue-0", "session": "ca6f06f2-f352-40e1-b8c8-3e73b24c2e3b"}
+{"ts": 1791591280.7361975, "experiment": "overhead", "usd": 0.0205991, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tstrue-1", "session": "f7771595-7fb9-41cd-be59-be9970a9198c"}
+{"ts": 1791591283.880432, "experiment": "overhead", "usd": 0.085691, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tsdefault-0", "session": "e6b4863c-1137-4873-9719-d986ca1a69cc"}
+{"ts": 1791591287.3650386, "experiment": "overhead", "usd": 0.023298100000000002, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tsdefault-1", "session": "1216def4-152d-48b6-850b-644ba4efedb6"}
+{"ts": 1791591291.03333, "experiment": "overhead", "usd": 0.022260099999999998, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tstrue-0", "session": "4e271f9a-c778-4337-bb3c-1ed02c2ac940"}
+{"ts": 1791591293.578957, "experiment": "overhead", "usd": 0.0222651, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tstrue-1", "session": "746b4d2a-4862-446c-95e6-18b9264dfc48"}
+{"ts": 1791591297.3571548, "experiment": "overhead", "usd": 0.071084, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tsdefault-0", "session": "135c2be0-d7bd-4332-bbb8-468b690f4878"}
+{"ts": 1791591300.0441778, "experiment": "overhead", "usd": 0.071412, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tsdefault-1", "session": "11898534-83fe-4aa1-96ae-decfc31c8771"}
+{"ts": 1791591302.6847057, "experiment": "overhead", "usd": 0.042192, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tstrue-0", "session": "7c595eed-413a-47e0-a5e0-f346491b16ab"}
+{"ts": 1791591305.2539203, "experiment": "overhead", "usd": 0.020508, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tstrue-1", "session": "050d115c-0272-42ec-8884-6739fb6cf8ac"}
+{"ts": 1791591308.458688, "experiment": "overhead", "usd": 0.086245, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tsdefault-0", "session": "fe9246c6-2243-4138-b7aa-a7ed5c8a87ad"}
+{"ts": 1791591311.9727774, "experiment": "overhead", "usd": 0.0232239, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tsdefault-1", "session": "fcbf5ea3-5821-4c7f-b4f7-748830ae0acc"}
+{"ts": 1791591314.780987, "experiment": "overhead", "usd": 0.022205000000000003, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tstrue-0", "session": "bfbc26cd-2eb8-459c-9f21-929a3548d7e8"}
+{"ts": 1791591317.179095, "experiment": "overhead", "usd": 0.022195, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tstrue-1", "session": "95439bab-b829-45d0-be15-0b04b2c9cf39"}
+{"ts": 1791591320.0139682, "experiment": "overhead", "usd": 0.0038085000000000007, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tsdefault-0", "session": "bb19b9de-c7c5-48a1-8d6c-9832b79277ba"}
+{"ts": 1791591322.165036, "experiment": "overhead", "usd": 0.0220252, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tsdefault-1", "session": "218c45d2-f99a-4cb7-b007-b9282fba28e8"}
+{"ts": 1791591324.832574, "experiment": "overhead", "usd": 0.0023418000000000002, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tstrue-0", "session": "2c83e550-4dd1-4bb6-ab41-d80a76ed3675"}
+{"ts": 1791591327.3426623, "experiment": "overhead", "usd": 0.0208407, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tstrue-1", "session": "cc62be06-df75-4418-8df7-c14ee75b332d"}
+{"ts": 1791591330.648049, "experiment": "overhead", "usd": 0.0045626, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tsdefault-0", "session": "02d3d691-d8cd-439b-bc6c-8acc8a3840cb"}
+{"ts": 1791591333.437588, "experiment": "overhead", "usd": 0.0235795, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tsdefault-1", "session": "549f0938-9370-4515-9946-fb4bf44ad363"}
+{"ts": 1791591336.0035453, "experiment": "overhead", "usd": 0.0024213999999999998, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tstrue-0", "session": "4f6bf72c-3846-4a4f-97c5-b159ba482fa8"}
+{"ts": 1791591339.427777, "experiment": "overhead", "usd": 0.022527699999999998, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tstrue-1", "session": "fbf36546-4034-4e13-94ac-58bea6612128"}
+{"ts": 1791591341.5911458, "experiment": "overhead", "usd": 0.00159763, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-5-5-none-tsdefault-0", "session": "da2f1f69-e50b-413a-82e4-3dd04254385c"}
+{"ts": 1791591343.6289253, "experiment": "overhead", "usd": 0.0034694, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-5-5-none-tstrue-0", "session": "0427a3e1-2fd0-4cbe-8e63-e513124a93ba"}
+{"ts": 1791591346.180287, "experiment": "overhead", "usd": 0.0085356, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-5-5-4servers-tsdefault-0", "session": "2135799f-11d2-4f7b-b9e0-dc1474b848c3"}
+{"ts": 1791591348.6434014, "experiment": "overhead", "usd": 0.00172452, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-5-5-4servers-tstrue-0", "session": "d803c01e-9660-476e-9beb-0213c9a3484d"}
+{"ts": 1791591351.4582393, "experiment": "overhead", "usd": 0.126524, "source": "total_cost_usd", "tag": "2.1.296-claude-sonnet-5-5-none-tsdefault-0", "session": "eb1a14fe-8f6f-4195-b2db-d9eef6631174"}
+{"ts": 1791591354.1211786, "experiment": "overhead", "usd": 0.066288, "source": "total_cost_usd", "tag": "2.1.296-claude-sonnet-5-5-none-tstrue-0", "session": "e1a65564-221a-44c8-809b-ea46de8ed3f3"}
+{"ts": 1791591357.5601802, "experiment": "overhead", "usd": 0.16761199999999998, "source": "total_cost_usd", "tag": "2.1.296-claude-sonnet-5-5-4servers-tsdefault-0", "session": "e4843253-2f30-4a54-a410-8f3fc9084b92"}
+{"ts": 1791591360.4676166, "experiment": "overhead", "usd": 0.0303432, "source": "total_cost_usd", "tag": "2.1.296-claude-sonnet-5-5-4servers-tstrue-0", "session": "4d13495e-cbf9-4d39-817e-3643cc3d4ef6"}
+{"ts": 1791591580.3578696, "experiment": "capstress", "usd": 0.0807828, "source": "ledger (killed)", "tag": "smoke/0"}
+{"ts": 1791591580.3581731, "experiment": "capstress", "usd": 0.8154465000000002, "source": "total_cost_usd", "tag": "smoke/1"}
+{"ts": 1791591603.5565104, "experiment": "capstress", "usd": 0.263508, "source": "total_cost_usd", "tag": "r1/1"}
+{"ts": 1791591603.5567057, "experiment": "capstress", "usd": 0.263508, "source": "total_cost_usd", "tag": "r1/2"}
+{"ts": 1791591603.556753, "experiment": "capstress", "usd": 0.277988, "source": "total_cost_usd", "tag": "r1/3"}
+{"ts": 1791591603.5567856, "experiment": "capstress", "usd": 0.278768, "source": "total_cost_usd", "tag": "r1/0"}
+{"ts": 1791591630.1269927, "experiment": "capstress", "usd": 0.0650864, "source": "ledger (killed)", "tag": "r2/1"}
+{"ts": 1791591630.1272635, "experiment": "capstress", "usd": 0.0651064, "source": "ledger (killed)", "tag": "r2/0"}
+{"ts": 1791591630.1273816, "experiment": "capstress", "usd": 0.09324120000000001, "source": "total_cost_usd", "tag": "r2/4"}
+{"ts": 1791591630.1274526, "experiment": "capstress", "usd": 0.23114980000000002, "source": "total_cost_usd", "tag": "r2/3"}
+{"ts": 1791591630.127497, "experiment": "capstress", "usd": 0.2295122, "source": "total_cost_usd", "tag": "r2/5"}
+{"ts": 1791591630.127533, "experiment": "capstress", "usd": 0.2295836, "source": "total_cost_usd", "tag": "r2/2"}
+{"ts": 1791591656.3410313, "experiment": "cachebreak", "usd": 0.072136, "source": "total_cost_usd", "tag": "control-0/1", "session": "14a2aa5f-9282-448d-970f-489c66e26c84"}
+{"ts": 1791591658.0542557, "experiment": "cachebreak", "usd": 0.0760523, "source": "total_cost_usd", "tag": "control-0/2", "session": "14a2aa5f-9282-448d-970f-489c66e26c84"}
+{"ts": 1791591660.3128426, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r3/0"}
+{"ts": 1791591660.3130863, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r3/7"}
+{"ts": 1791591660.3131828, "experiment": "capstress", "usd": 0.0651864, "source": "ledger (killed)", "tag": "r3/1"}
+{"ts": 1791591660.3132432, "experiment": "capstress", "usd": 0.0651664, "source": "ledger (killed)", "tag": "r3/2"}
+{"ts": 1791591660.313295, "experiment": "capstress", "usd": 0.0938732, "source": "total_cost_usd", "tag": "r3/3"}
+{"ts": 1791591660.3134031, "experiment": "capstress", "usd": 0.22599940000000002, "source": "total_cost_usd", "tag": "r3/5"}
+{"ts": 1791591660.3134718, "experiment": "capstress", "usd": 0.225926, "source": "total_cost_usd", "tag": "r3/4"}
+{"ts": 1791591660.313523, "experiment": "capstress", "usd": 0.2307096, "source": "total_cost_usd", "tag": "r3/6"}
+{"ts": 1791591660.441076, "experiment": "cachebreak", "usd": 0.021938700000000002, "source": "total_cost_usd", "tag": "tools-0/1", "session": "d8e0249b-ac46-4665-b383-3daf99390da5"}
+{"ts": 1791591662.1900535, "experiment": "cachebreak", "usd": 0.09317170000000001, "source": "total_cost_usd", "tag": "tools-0/2", "session": "d8e0249b-ac46-4665-b383-3daf99390da5"}
+{"ts": 1791591670.7929428, "experiment": "cachebreak", "usd": 0.132084, "source": "total_cost_usd", "tag": "ttl-2/1", "session": "82d9538a-8a0d-4eec-a38e-9f6216281e05"}
+{"ts": 1791591671.2142878, "experiment": "cachebreak", "usd": 0.022008700000000003, "source": "total_cost_usd", "tag": "control-0/1", "session": "6048206b-b260-492f-8ec6-6243680a2de4"}
+{"ts": 1791591671.8321404, "experiment": "cachebreak", "usd": 0.13208025, "source": "total_cost_usd", "tag": "ttl-0/1", "session": "4a2d5caa-9987-4dfb-96c7-afd6cbe925fc"}
+{"ts": 1791591672.2771795, "experiment": "cachebreak", "usd": 0.1320765, "source": "total_cost_usd", "tag": "ttl-1/1", "session": "d7b1613c-e27a-42eb-95e3-b26f99b32f5b"}
+{"ts": 1791591673.6846883, "experiment": "cachebreak", "usd": 0.025890100000000003, "source": "total_cost_usd", "tag": "control-0/2", "session": "6048206b-b260-492f-8ec6-6243680a2de4"}
+{"ts": 1791591677.3882189, "experiment": "cachebreak", "usd": 0.022115700000000002, "source": "total_cost_usd", "tag": "control-1/1", "session": "661d710b-efaa-4223-a51b-468bb59dd4c7"}
+{"ts": 1791591679.2349122, "experiment": "cachebreak", "usd": 0.026084200000000002, "source": "total_cost_usd", "tag": "control-1/2", "session": "661d710b-efaa-4223-a51b-468bb59dd4c7"}
+{"ts": 1791591682.401191, "experiment": "cachebreak", "usd": 0.021998700000000003, "source": "total_cost_usd", "tag": "control-2/1", "session": "4861023c-834c-447f-a844-e7d51350bf1d"}
+{"ts": 1791591684.1748936, "experiment": "cachebreak", "usd": 0.025926100000000004, "source": "total_cost_usd", "tag": "control-2/2", "session": "4861023c-834c-447f-a844-e7d51350bf1d"}
+{"ts": 1791591688.089549, "experiment": "cachebreak", "usd": 0.021983700000000002, "source": "total_cost_usd", "tag": "tools-0/1", "session": "d68c8c7b-7bfb-4551-82be-de09f50b1f2a"}
+{"ts": 1791591690.4994993, "experiment": "cachebreak", "usd": 0.0440298, "source": "total_cost_usd", "tag": "tools-0/2", "session": "d68c8c7b-7bfb-4551-82be-de09f50b1f2a"}
+{"ts": 1791591693.5056643, "experiment": "cachebreak", "usd": 0.021983700000000002, "source": "total_cost_usd", "tag": "tools-1/1", "session": "587d0786-f451-445d-a9af-b536ee2b93a0"}
+{"ts": 1791591696.2026045, "experiment": "cachebreak", "usd": 0.0439948, "source": "total_cost_usd", "tag": "tools-1/2", "session": "587d0786-f451-445d-a9af-b536ee2b93a0"}
+{"ts": 1791591698.7686756, "experiment": "cachebreak", "usd": 0.022033700000000003, "source": "total_cost_usd", "tag": "tools-2/1", "session": "e251f122-0371-4eb3-a71e-c960a7aa30f2"}
+{"ts": 1791591699.3939116, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r4/2"}
+{"ts": 1791591699.3941696, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r4/6"}
+{"ts": 1791591699.3942642, "experiment": "capstress", "usd": 0.0652064, "source": "ledger (killed)", "tag": "r4/0"}
+{"ts": 1791591699.394323, "experiment": "capstress", "usd": 0.0653264, "source": "ledger (killed)", "tag": "r4/3"}
+{"ts": 1791591699.3944352, "experiment": "capstress", "usd": 0.0688664, "source": "total_cost_usd", "tag": "r4/4"}
+{"ts": 1791591699.3944879, "experiment": "capstress", "usd": 0.0694264, "source": "ledger (killed)", "tag": "r4/1"}
+{"ts": 1791591699.3945372, "experiment": "capstress", "usd": 0.2258528, "source": "total_cost_usd", "tag": "r4/5"}
+{"ts": 1791591699.394588, "experiment": "capstress", "usd": 0.2881482, "source": "total_cost_usd", "tag": "r4/7"}
+{"ts": 1791591700.9174461, "experiment": "cachebreak", "usd": 0.044054800000000005, "source": "total_cost_usd", "tag": "tools-2/2", "session": "e251f122-0371-4eb3-a71e-c960a7aa30f2"}
+{"ts": 1791591704.1820807, "experiment": "cachebreak", "usd": 0.0220167, "source": "total_cost_usd", "tag": "system-0/1", "session": "a807fbed-522c-4ad9-b0cf-c0d4ca6f4d05"}
+{"ts": 1791591706.111393, "experiment": "cachebreak", "usd": 0.025892000000000002, "source": "total_cost_usd", "tag": "system-0/2", "session": "a807fbed-522c-4ad9-b0cf-c0d4ca6f4d05"}
+{"ts": 1791591708.66297, "experiment": "cachebreak", "usd": 0.021983700000000002, "source": "total_cost_usd", "tag": "system-1/1", "session": "7b9d3883-a25d-4488-80c0-85ee43e52853"}
+{"ts": 1791591710.390893, "experiment": "cachebreak", "usd": 0.025865100000000002, "source": "total_cost_usd", "tag": "system-1/2", "session": "7b9d3883-a25d-4488-80c0-85ee43e52853"}
+{"ts": 1791591713.3387694, "experiment": "cachebreak", "usd": 0.022008700000000003, "source": "total_cost_usd", "tag": "system-2/1", "session": "5d61323d-ff0f-4184-a787-75dd6edcd481"}
+{"ts": 1791591715.643428, "experiment": "cachebreak", "usd": 0.025905100000000004, "source": "total_cost_usd", "tag": "system-2/2", "session": "5d61323d-ff0f-4184-a787-75dd6edcd481"}
+{"ts": 1791591718.6670842, "experiment": "cachebreak", "usd": 0.021986699999999998, "source": "total_cost_usd", "tag": "model-0/1", "session": "ea826e31-c8bc-47de-8da4-5f2ca2482ece"}
+{"ts": 1791591720.4019725, "experiment": "cachebreak", "usd": 0.0308652, "source": "total_cost_usd", "tag": "model-0/2", "session": "ea826e31-c8bc-47de-8da4-5f2ca2482ece"}
+{"ts": 1791591723.373592, "experiment": "cachebreak", "usd": 0.0219887, "source": "total_cost_usd", "tag": "model-1/1", "session": "ff1e0945-5425-4efd-b8ca-157f855ee8c4"}
+{"ts": 1791591725.5879757, "experiment": "cachebreak", "usd": 0.02486871, "source": "total_cost_usd", "tag": "model-1/2", "session": "ff1e0945-5425-4efd-b8ca-157f855ee8c4"}
+{"ts": 1791591728.2994254, "experiment": "cachebreak", "usd": 0.021986699999999998, "source": "total_cost_usd", "tag": "model-2/1", "session": "7c9ff7f2-615c-49f7-9641-41acc0ee399c"}
+{"ts": 1791591730.1686566, "experiment": "cachebreak", "usd": 0.024866709999999997, "source": "total_cost_usd", "tag": "model-2/2", "session": "7c9ff7f2-615c-49f7-9641-41acc0ee399c"}
+{"ts": 1791591733.067658, "experiment": "cachebreak", "usd": 0.022008700000000003, "source": "total_cost_usd", "tag": "mcp-0/1", "session": "f4ce62b6-bb28-472f-a066-2a6dc5f45d7b"}
+{"ts": 1791591736.0557735, "experiment": "cachebreak", "usd": 0.0979487, "source": "total_cost_usd", "tag": "mcp-0/2", "session": "f4ce62b6-bb28-472f-a066-2a6dc5f45d7b"}
+{"ts": 1791591738.8442564, "experiment": "cachebreak", "usd": 0.0220827, "source": "total_cost_usd", "tag": "mcp-1/1", "session": "5692b8c6-229d-4411-b2ba-8f89ff2d7cb9"}
+{"ts": 1791591741.2599397, "experiment": "cachebreak", "usd": 0.0443687, "source": "total_cost_usd", "tag": "mcp-1/2", "session": "5692b8c6-229d-4411-b2ba-8f89ff2d7cb9"}
+{"ts": 1791591744.4788747, "experiment": "cachebreak", "usd": 0.0220027, "source": "total_cost_usd", "tag": "mcp-2/1", "session": "565a958f-c6c8-4640-bb54-651269c6957a"}
+{"ts": 1791591746.8852384, "experiment": "cachebreak", "usd": 0.0442617, "source": "total_cost_usd", "tag": "mcp-2/2", "session": "565a958f-c6c8-4640-bb54-651269c6957a"}
+{"ts": 1791591749.370676, "experiment": "cachebreak", "usd": 0.022278700000000002, "source": "total_cost_usd", "tag": "claude_md-0/1", "session": "74d36813-5c6c-4019-a7bc-fb9341f7adfb"}
+{"ts": 1791591751.4608195, "experiment": "cachebreak", "usd": 0.026511600000000003, "source": "total_cost_usd", "tag": "claude_md-0/2", "session": "74d36813-5c6c-4019-a7bc-fb9341f7adfb"}
+{"ts": 1791591753.963137, "experiment": "cachebreak", "usd": 0.0222587, "source": "total_cost_usd", "tag": "claude_md-1/1", "session": "dda0bcdd-7e0e-4737-bb4c-039b0a54214c"}
+{"ts": 1791591755.837781, "experiment": "cachebreak", "usd": 0.0264636, "source": "total_cost_usd", "tag": "claude_md-1/2", "session": "dda0bcdd-7e0e-4737-bb4c-039b0a54214c"}
+{"ts": 1791591757.8710153, "experiment": "cachebreak", "usd": 0.0222107, "source": "total_cost_usd", "tag": "claude_md-2/1", "session": "ce65263a-160a-46f0-863e-04f3a4e3ce52"}
+{"ts": 1791591759.350172, "experiment": "cachebreak", "usd": 0.0263457, "source": "total_cost_usd", "tag": "claude_md-2/2", "session": "ce65263a-160a-46f0-863e-04f3a4e3ce52"}
+{"ts": 1791591761.223159, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r5/5"}
+{"ts": 1791591761.2234447, "experiment": "capstress", "usd": 0.0539064, "source": "total_cost_usd", "tag": "r5/7"}
+{"ts": 1791591761.223496, "experiment": "capstress", "usd": 0.0691464, "source": "total_cost_usd", "tag": "r5/1"}
+{"ts": 1791591761.2235322, "experiment": "capstress", "usd": 0.0893612, "source": "ledger (killed)", "tag": "r5/3"}
+{"ts": 1791591761.2235615, "experiment": "capstress", "usd": 0.0895652, "source": "ledger (killed)", "tag": "r5/2"}
+{"ts": 1791591761.223591, "experiment": "capstress", "usd": 0.0900332, "source": "ledger (killed)", "tag": "r5/0"}
+{"ts": 1791591761.2236192, "experiment": "capstress", "usd": 0.2265674, "source": "total_cost_usd", "tag": "r5/6"}
+{"ts": 1791591761.223645, "experiment": "capstress", "usd": 0.22500900000000001, "source": "total_cost_usd", "tag": "r5/4"}
+{"ts": 1791591788.3992803, "experiment": "capstress", "usd": 0.09188120000000001, "source": "total_cost_usd", "tag": "r6/2"}
+{"ts": 1791591788.3995059, "experiment": "capstress", "usd": 0.0936652, "source": "total_cost_usd", "tag": "r6/0"}
+{"ts": 1791591788.3995574, "experiment": "capstress", "usd": 0.10544759999999999, "source": "total_cost_usd", "tag": "r6/1"}
+{"ts": 1791591788.3995912, "experiment": "capstress", "usd": 0.2273636, "source": "total_cost_usd", "tag": "r6/4"}
+{"ts": 1791591788.3996363, "experiment": "capstress", "usd": 0.2327846, "source": "total_cost_usd", "tag": "r6/5"}
+{"ts": 1791591788.3996656, "experiment": "capstress", "usd": 0.2361974, "source": "total_cost_usd", "tag": "r6/3"}
+{"ts": 1791591793.2148764, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/1"}
+{"ts": 1791591793.2150598, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/5"}
+{"ts": 1791591793.2151294, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/0"}
+{"ts": 1791591793.2152066, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/2"}
+{"ts": 1791591793.2152486, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/3"}
+{"ts": 1791591793.215279, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r7/4"}
+{"ts": 1791591796.7207873, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r8/0"}
+{"ts": 1791591796.7209868, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r8/2"}
+{"ts": 1791591796.7210362, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r8/3"}
+{"ts": 1791591796.721069, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r8/1"}
+{"ts": 1791591805.6021519, "experiment": "capstress", "usd": 0.13335, "source": "total_cost_usd", "tag": "r9/5"}
+{"ts": 1791591805.6023118, "experiment": "capstress", "usd": 0.13335, "source": "total_cost_usd", "tag": "r9/7"}
+{"ts": 1791591805.6024287, "experiment": "capstress", "usd": 0.13335, "source": "total_cost_usd", "tag": "r9/4"}
+{"ts": 1791591805.6024716, "experiment": "capstress", "usd": 0.13335, "source": "total_cost_usd", "tag": "r9/0"}
+{"ts": 1791591805.602504, "experiment": "capstress", "usd": 0.13335, "source": "total_cost_usd", "tag": "r9/6"}
+{"ts": 1791591805.6025364, "experiment": "capstress", "usd": 0.1408999, "source": "ledger (killed)", "tag": "r9/2"}
+{"ts": 1791591805.6025667, "experiment": "capstress", "usd": 0.14077989999999999, "source": "total_cost_usd", "tag": "r9/3"}
+{"ts": 1791591805.6025944, "experiment": "capstress", "usd": 0.1411299, "source": "total_cost_usd", "tag": "r9/1"}
+{"ts": 1791591810.6697288, "experiment": "direct", "usd": 0.0165192, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tsdefault-direct", "session": "1fab1d44-623c-4d9f-a953-2fb131a19262"}
+{"ts": 1791591815.8354828, "experiment": "direct", "usd": 0.071914, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-none-tsfalse-direct", "session": "4121650e-5154-499f-816a-b76321a42493"}
+{"ts": 1791591821.8458564, "experiment": "direct", "usd": 0.0182152, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tsdefault-direct", "session": "25b8ebfc-df7a-4daa-8a8c-2925c7ec925e"}
+{"ts": 1791591827.529876, "experiment": "direct", "usd": 0.08599699999999999, "source": "total_cost_usd", "tag": "2.1.250-claude-haiku-4-5-4servers-tsfalse-direct", "session": "80740885-feef-454b-90d8-33829d8d8242"}
+{"ts": 1791591832.7298572, "experiment": "direct", "usd": 0.0164913, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tsdefault-direct", "session": "9cba8b2b-07de-465a-8710-9d2ad88d959c"}
+{"ts": 1791591838.353748, "experiment": "direct", "usd": 0.072142, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-none-tsfalse-direct", "session": "490792db-61a9-4bf3-a329-28309a3e79cc"}
+{"ts": 1791591844.700627, "experiment": "direct", "usd": 0.0181433, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tsdefault-direct", "session": "2a2f47ab-f3f3-4d08-a2f7-34dcdd59002e"}
+{"ts": 1791591851.0774794, "experiment": "direct", "usd": 0.08696999999999999, "source": "total_cost_usd", "tag": "2.1.287-claude-haiku-4-5-4servers-tsfalse-direct", "session": "aff4e86f-2059-430a-b380-1ec3862a8c64"}
+{"ts": 1791591855.74616, "experiment": "direct", "usd": 0.016799, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tsdefault-direct", "session": "e263538d-174c-4ea6-a1d0-ad50680c6071"}
+{"ts": 1791591861.8014617, "experiment": "direct", "usd": 0.07289, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-none-tsfalse-direct", "session": "aa9476bf-2e40-41da-bce9-193e521a2559"}
+{"ts": 1791591866.8729503, "experiment": "direct", "usd": 0.018501, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tsdefault-direct", "session": "279244b9-2731-4234-94ff-d77a75a232fc"}
+{"ts": 1791591873.1087554, "experiment": "direct", "usd": 0.088077, "source": "total_cost_usd", "tag": "2.1.296-claude-haiku-4-5-4servers-tsfalse-direct", "session": "7bbc172b-ec77-4b2c-b0c2-112e1766da50"}
+{"ts": 1791591960.1901343, "experiment": "cachebreak", "usd": 0.0222527, "source": "total_cost_usd", "tag": "git-0/1", "session": "6e203d05-64be-4048-b9d6-f2938b6ebf6f"}
+{"ts": 1791591965.1897945, "experiment": "cachebreak", "usd": 0.0261628, "source": "total_cost_usd", "tag": "git-0/2", "session": "6e203d05-64be-4048-b9d6-f2938b6ebf6f"}
+{"ts": 1791591970.9373906, "experiment": "cachebreak", "usd": 0.022000699999999998, "source": "total_cost_usd", "tag": "system_full-0/1", "session": "514373e5-cac6-49de-8d73-c60ddbb0ea1f"}
+{"ts": 1791591975.7535346, "experiment": "cachebreak", "usd": 0.0258797, "source": "total_cost_usd", "tag": "system_full-0/2", "session": "514373e5-cac6-49de-8d73-c60ddbb0ea1f"}
+{"ts": 1791591997.683771, "experiment": "cachebreak", "usd": 0.022193699999999997, "source": "total_cost_usd", "tag": "git-0/1", "session": "1a5e4e7a-3622-4a96-a337-42b5f2635e7f"}
+{"ts": 1791591999.6757715, "experiment": "cachebreak", "usd": 0.026098099999999996, "source": "total_cost_usd", "tag": "git-0/2", "session": "1a5e4e7a-3622-4a96-a337-42b5f2635e7f"}
+{"ts": 1791592002.2859912, "experiment": "cachebreak", "usd": 0.26421300000000003, "source": "total_cost_usd", "tag": "ttl-2/2", "session": "82d9538a-8a0d-4eec-a38e-9f6216281e05"}
+{"ts": 1791592002.6315668, "experiment": "cachebreak", "usd": 0.0221807, "source": "total_cost_usd", "tag": "git-1/1", "session": "94cbc175-ad67-4502-8ad3-7f18e45483b1"}
+{"ts": 1791592004.028211, "experiment": "cachebreak", "usd": 0.1751817, "source": "total_cost_usd", "tag": "ttl-0/2", "session": "4a2d5caa-9987-4dfb-96c7-afd6cbe925fc"}
+{"ts": 1791592004.4908886, "experiment": "cachebreak", "usd": 0.1751742, "source": "total_cost_usd", "tag": "ttl-1/2", "session": "d7b1613c-e27a-42eb-95e3-b26f99b32f5b"}
+{"ts": 1791592005.8814988, "experiment": "cachebreak", "usd": 0.0260727, "source": "total_cost_usd", "tag": "git-1/2", "session": "94cbc175-ad67-4502-8ad3-7f18e45483b1"}
+{"ts": 1791592008.2397656, "experiment": "cachebreak", "usd": 0.022154700000000003, "source": "total_cost_usd", "tag": "git-2/1", "session": "2f0ae00c-62dc-4057-9e2b-97bc316b3393"}
+{"ts": 1791592009.8705544, "experiment": "cachebreak", "usd": 0.026059900000000004, "source": "total_cost_usd", "tag": "git-2/2", "session": "2f0ae00c-62dc-4057-9e2b-97bc316b3393"}
+{"ts": 1791592013.6932702, "experiment": "cachebreak", "usd": 0.022008700000000003, "source": "total_cost_usd", "tag": "system_full-0/1", "session": "2bdd37e2-9351-40ce-9661-0e7891da071c"}
+{"ts": 1791592015.46034, "experiment": "cachebreak", "usd": 0.025911600000000003, "source": "total_cost_usd", "tag": "system_full-0/2", "session": "2bdd37e2-9351-40ce-9661-0e7891da071c"}
+{"ts": 1791592018.056491, "experiment": "cachebreak", "usd": 0.021983700000000002, "source": "total_cost_usd", "tag": "system_full-1/1", "session": "e8766de9-5f1d-4919-8c11-bcd7fc2df548"}
+{"ts": 1791592019.8591166, "experiment": "cachebreak", "usd": 0.0258266, "source": "total_cost_usd", "tag": "system_full-1/2", "session": "e8766de9-5f1d-4919-8c11-bcd7fc2df548"}
+{"ts": 1791592022.3951485, "experiment": "cachebreak", "usd": 0.0220317, "source": "total_cost_usd", "tag": "system_full-2/1", "session": "7b79d7ee-2659-45e3-994f-95831452edbe"}
+{"ts": 1791592024.1961067, "experiment": "cachebreak", "usd": 0.025959500000000003, "source": "total_cost_usd", "tag": "system_full-2/2", "session": "7b79d7ee-2659-45e3-994f-95831452edbe"}
+{"ts": 1791592059.4826443, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r10/0"}
+{"ts": 1791592059.482843, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r10/5"}
+{"ts": 1791592059.4828923, "experiment": "capstress", "usd": 0.0, "source": "total_cost_usd", "tag": "r10/4"}
+{"ts": 1791592059.4829328, "experiment": "capstress", "usd": 0.0449677, "source": "ledger (killed)", "tag": "r10/1"}
+{"ts": 1791592059.4829803, "experiment": "capstress", "usd": 0.5756658000000001, "source": "total_cost_usd", "tag": "r10/3"}
+{"ts": 1791592059.4830282, "experiment": "capstress", "usd": 0.9436321000000002, "source": "total_cost_usd", "tag": "r10/2"}

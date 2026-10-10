@@ -3,7 +3,7 @@
 ```
  agent / SDK ──HTTP──▶ skinflint (127.0.0.1:4100) ──HTTPS──▶ api.anthropic.com / api.openai.com
                          │  1. admit: check budgets, reserve
-                         │  2. forward unchanged, stream back as bytes arrive
+                         │  2. forward, stream back as bytes arrive
                          │  3. read usage from the response
                          ▼  4. settle: real cost replaces the reservation
                        SQLite ledger (~/.skinflint/skinflint.db)
@@ -26,9 +26,9 @@ Only these are metered; everything else passes through untouched and unrecorded:
 
 ## Forwarding
 
-Request and response bodies are forwarded as received. skinflint removes hop-by-hop
-headers and its own `x-skinflint-*` headers. Everything else, including `anthropic-beta`
-and auth headers, goes upstream unchanged.
+Request and response bodies are forwarded as received, except for the two optional changes
+below. skinflint removes hop-by-hop headers and its own `x-skinflint-*` headers. Everything
+else, including `anthropic-beta` and auth headers, goes upstream unchanged.
 
 Streams are relayed chunk by chunk. A parser reads the server-sent events as they pass and
 keeps the latest usage numbers. It never delays a chunk.
@@ -57,8 +57,15 @@ Because the check and the reservation happen in one transaction, parallel reques
 separate skinflint processes sharing a ledger, cannot all pass the same remaining budget.
 
 When the response finishes, the row is updated with the real usage and cost and the
-reservation is cleared. If the client disconnects mid-stream, the row is settled with the
-usage seen so far and marked `aborted`.
+reservation is cleared. If the client disconnects mid-stream, skinflint closes the upstream
+connection and marks the row `aborted`. The final usage never arrives (Anthropic reports
+output tokens only in the last `message_delta`; OpenAI reports no usage until the end), so
+the row is settled with output estimated from the content streamed so far (ASCII at 3
+characters per token, other text at one token per UTF-8 byte, which errs high) and, when the
+stream reported no input, the conservative prompt bound (2.5 characters per token). The cost
+is marked estimated (`~`). Output the client never saw is not counted: thinking that is not
+streamed as text (omitted or redacted thinking), OpenAI reasoning tokens, and anything the
+provider generated after the connection closed. The same applies when the upstream stream breaks.
 
 Costs come from a built-in price table ([`prices.toml`](../src/skinflint/data/prices.toml))
 covering uncached input, 5-minute and 1-hour cache writes, cache reads, output, long-context

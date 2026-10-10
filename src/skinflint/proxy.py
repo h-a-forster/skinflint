@@ -9,6 +9,8 @@ import json
 import logging
 import os
 import re
+import socket
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -29,6 +31,7 @@ from skinflint.config import Config
 from skinflint.model import Decision, Endpoint, Provider, Record, RequestInfo, Segment, State, Usage
 from skinflint.pricing import Pricing
 from skinflint.providers import ADAPTERS, Adapter, StreamTracker, client_name, detect
+from skinflint.providers.base import estimate_unfinished
 from skinflint.store import Store
 
 log = logging.getLogger("skinflint")
@@ -279,6 +282,8 @@ class Proxy:
         # to report) but differs for side requests and subagents in the same session.
         conversation = (session, agent_id or thread or agent) if session else None
         call.conversation = conversation
+        call.est_prompt_tokens = info.est_prompt_tokens
+        call.max_prompt_tokens = info.max_prompt_tokens
         try:
             return await self.forward(
                 call, adapter, endpoint, target, raw, data, info, conversation
@@ -417,6 +422,8 @@ class Call:
         self.ttft: float | None = None
         self.settled = False
         self.conversation: tuple[str, str] | None = None
+        self.est_prompt_tokens = 0  # pre-flight estimate
+        self.max_prompt_tokens = 0  # conservative bound, for streams cut off before usage
 
     def relay_bytes(self, upstream: aiohttp.ClientResponse, data: bytes) -> web.Response:
         """A non-2xx upstream answer, passed through unchanged."""
@@ -499,14 +506,28 @@ class Call:
             getattr(tracker, "cache_miss_reason", None),
             getattr(tracker, "cache_missed_tokens", None),
         )
+        usage = tracker.usage
+        estimated = None
+        if state is not State.OK and not tracker.finished:
+            # Cut off before the final usage (Anthropic sends output_tokens last; OpenAI sends
+            # nothing until the end): bill what had streamed, marked as an estimate.
+            chars = getattr(tracker, "streamed_chars", 0)
+            estimated = estimate_unfinished(
+                usage, chars, max(self.max_prompt_tokens, self.est_prompt_tokens)
+            )
+            if estimated is not None:
+                usage = estimated
+                note = f"usage estimated from {chars:,} streamed chars"
+                error = f"{error}; {note}" if error else note
         self.settle(
             state,
             status,
-            usage=tracker.usage,
+            usage=usage,
             model=tracker.model,
             upstream_id=tracker.upstream_id,
             error=error,
             diag=diag,
+            estimated=estimated is not None,
         )
 
     def settle(
@@ -519,8 +540,10 @@ class Call:
         upstream_id: str | None = None,
         error: str | None = None,
         diag: tuple[str | None, int | None] = (None, None),
+        estimated: bool = False,
     ) -> None:
-        """Compute cost and queue the ledger update. Synchronous so cancellation cannot skip it."""
+        """Compute cost and queue the ledger update. Synchronous so cancellation cannot skip it.
+        `estimated`: the usage is skinflint's estimate, not the provider's report."""
         if self.settled:
             return
         self.settled = True
@@ -539,6 +562,7 @@ class Call:
             rec.cost_usd, rec.cost_estimated = proxy.pricing.cost(
                 rec.provider, rec.model, rec.usage
             )
+            rec.cost_estimated = rec.cost_estimated or estimated
         except Exception as e:  # noqa: BLE001
             rec.cost_usd, rec.cost_estimated = 0.0, True
             log.warning("could not price %s: %s", rec.model, e)
@@ -752,6 +776,44 @@ def build(cfg: Config) -> tuple[Proxy, Store]:
     return Proxy(cfg, store, pricing, budget), store
 
 
+def reuse_address() -> bool:
+    """SO_REUSEADDR for the listener. On POSIX it only lets a restart bind over connections
+    in TIME_WAIT; on Windows it would let a second process bind the same port while this one
+    listens, so it stays off there (and `_listen_sockets` binds exclusively instead)."""
+    return sys.platform != "win32"
+
+
+def _listen_sockets(host: str, port: int, sock_mod: Any = socket) -> list[socket.socket]:
+    """Non-blocking listening sockets, one per address `host` resolves to (every interface
+    for "", as aiohttp's TCPSite binds), that no other process can share the port with
+    (SO_EXCLUSIVEADDRUSE, Windows only). Port 0 picks one free port for all of them."""
+    infos = sock_mod.getaddrinfo(
+        host or None, port, type=sock_mod.SOCK_STREAM, flags=sock_mod.AI_PASSIVE
+    )
+    socks: list[socket.socket] = []
+    seen: set[tuple[int, str]] = set()
+    try:
+        for family, kind, proto, _, addr in infos:
+            if (family, addr[0]) in seen:
+                continue
+            seen.add((family, addr[0]))
+            sock = sock_mod.socket(family, kind, proto)
+            socks.append(sock)
+            sock.setsockopt(sock_mod.SOL_SOCKET, sock_mod.SO_EXCLUSIVEADDRUSE, 1)
+            if family == sock_mod.AF_INET6:
+                # IPv6 and IPv4 get a socket each, so the IPv6 one must not claim IPv4 too.
+                sock.setsockopt(sock_mod.IPPROTO_IPV6, sock_mod.IPV6_V6ONLY, 1)
+            sock.bind((addr[0], port, *addr[2:]))
+            sock.listen()
+            sock.setblocking(False)
+            port = port or sock.getsockname()[1]
+    except BaseException:
+        for sock in socks:
+            sock.close()
+        raise
+    return socks
+
+
 async def _serve(
     cfg: Config, ready: threading.Event | None = None, holder: dict | None = None
 ) -> None:
@@ -760,8 +822,13 @@ async def _serve(
         runner = web.AppRunner(proxy.app(), access_log=None, handle_signals=False)
         await runner.setup()
         try:
-            site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=True)
-            await site.start()
+            sites: list[web.BaseSite]
+            if sys.platform == "win32":
+                sites = [web.SockSite(runner, s) for s in _listen_sockets(cfg.host, cfg.port)]
+            else:
+                sites = [web.TCPSite(runner, cfg.host, cfg.port, reuse_address=reuse_address())]
+            for site in sites:
+                await site.start()
             port = runner.addresses[0][1] if runner.addresses else cfg.port
             stop = asyncio.Event()
             if holder is not None:

@@ -7,16 +7,22 @@
 A local proxy for the Anthropic and OpenAI APIs. It puts hard spend caps on coding agents,
 shows where every prompt token goes, and explains each prompt-cache miss.
 
-Point Claude Code, Codex or any SDK at `http://127.0.0.1:4100`. Requests pass through
-unchanged. Each one is checked against your budgets first and recorded after.
+Point Claude Code, Codex or any SDK at `http://127.0.0.1:4100`. Requests are forwarded
+as sent, apart from two optional additions that make metering work
+([details](docs/how-it-works.md#forwarding)). Each one is checked against your budgets first
+and recorded after.
 
 ## Why
 
-- **Agents spend unattended.** Provider spend limits are per organisation and per month.
-  Nothing stops one runaway session or one CI job at $5.
-- **Most of the prompt is not your prompt.** Claude Code 2.1.287 sent 43,325 tokens to
-  answer `Reply with exactly: hi`. 76% were definitions of 39 tools; none was called. With
-  six tools the same request was 13,884 tokens. See [results](docs/results.md).
+- **Agents spend unattended.** Provider limits are monthly, per organisation or workspace
+  (Anthropic) or per project (OpenAI). `claude -p --max-budget-usd` caps one run and proxies
+  like LiteLLM cap per key, but each needs setup per run or key. skinflint caps every Claude
+  Code and Codex session by the session ids they already send. No keys; it runs locally.
+- **Most of the prompt is not your prompt.** Claude Code 2.1.296 sends about 21k tokens to
+  answer `Reply with exactly: hi`; 58% are tool definitions, none of them called. Behind a
+  custom `ANTHROPIC_BASE_URL` (tested through skinflint only) it turns tool search off and
+  sends 36k, unless `ENABLE_TOOL_SEARCH` is set. `skinflint run` sets it for you. See
+  [results](docs/results.md).
 - **Cache misses are silent.** One changed tool schema or a timestamp in the system prompt
   re-bills the whole prefix at the cache-write rate. The response only shows a bigger number.
 
@@ -54,6 +60,7 @@ In another shell:
 
 ```sh
 export ANTHROPIC_BASE_URL=http://127.0.0.1:4100
+export ENABLE_TOOL_SEARCH=true   # else Claude Code turns tool search off here: +67% prompt
 claude
 ```
 
@@ -62,6 +69,9 @@ Or wrap one command with its own proxy and cap:
 ```sh
 skinflint run --cap 2 -- claude -p "fix the failing test"
 ```
+
+`skinflint run` sets `ENABLE_TOOL_SEARCH=true` in the child's environment unless the variable
+is already set. Set `ENABLE_TOOL_SEARCH=false` to opt out.
 
 Then:
 
@@ -75,7 +85,8 @@ Setup for Codex, the SDKs and the status line: [docs/clients.md](docs/clients.md
 
 ## Example
 
-One request from Claude Code, as seen by `skinflint profile`:
+One request from Claude Code 2.1.287 with tool search off (see above), as seen by
+`skinflint profile`:
 
 ```text
 request #1  21:27  claude-haiku-4-5-20251001  prompt 43.3k (0% cached)  output 40  $0.0868
@@ -166,8 +177,16 @@ All data commands take `--json`.
 
 - Only traffic through the proxy is capped. Keep a provider-side spend limit as a backstop.
 - With the default `reserve = "estimate"`, requests already in flight when a cap is reached
-  can finish, so spend can overshoot by their output. `reserve = "worst_case"` never
-  overshoots and refuses earlier. See [reservations](docs/configuration.md#reservations).
+  can finish, so spend can overshoot by their output: up to $2.56 per in-flight Claude Code
+  request on Claude Opus 5.5 with 128,000 output tokens ($5.12 in fast mode, $1.28 on Sonnet
+  5.5). Measured with 4-8 parallel Claude Code agents on a $1 cap, spend ended between $0.89
+  and $1.09. `reserve = "worst_case"` reserves
+  the most each request body allows and refuses earlier: $1.57 per Claude Code request on
+  Sonnet 5.5, $3.13 on Opus 5.5, so it needs caps of several dollars. It cannot bound
+  server-side tool input or a multi-page base64 PDF. For inputs held on the server
+  (documents by file id or URL, stored prompts, previous responses and conversations) it
+  reserves a full context window. See [reservations](docs/configuration.md#reservations)
+  and [results](docs/results.md#7-caps-under-parallel-load).
 - Costs come from a price table dated in [`prices.toml`](src/skinflint/data/prices.toml).
   Unknown models are priced at the provider's flagship rate and marked estimated.
 - Token attribution within a prompt is an estimate scaled to the exact total.

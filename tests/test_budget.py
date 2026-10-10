@@ -3,7 +3,15 @@ from datetime import UTC, datetime, timedelta, tzinfo
 
 import pytest
 
-from skinflint.budget import Budget, limit_text, window_end, window_start
+from skinflint.budget import (
+    DEFAULT_MAX_OUTPUT,
+    SERVER_CONTEXT_TOKENS,
+    UNCAPPED_WEB_SEARCHES,
+    Budget,
+    limit_text,
+    window_end,
+    window_start,
+)
 from skinflint.model import (
     Action,
     BudgetRule,
@@ -72,7 +80,7 @@ class FakePricing:
         p = PRICES.get(model)
         return p, p is not None
 
-    def max_cost(self, provider, model, prompt_tokens, output_tokens):
+    def max_cost(self, provider, model, prompt_tokens, output_tokens, **_hints):
         p = PRICES[model]
         return (prompt_tokens * p.input + output_tokens * p.output) / 1e6
 
@@ -225,10 +233,63 @@ def test_estimate_vs_worst_case(store, clock):
     worst = make(store, clock, rule, reserve="worst_case")
     d = admit(worst, clock, max_out=200_000)  # $3 + $3 output
     assert not d.allowed and "this request needs up to $6.00" in d.message
-    d = admit(worst, clock, prompt=100_000)  # default 4096 output tokens
+    store.mark_lost(clock() + 1)
+    d = admit(worst, clock, prompt=100_000)  # no max tokens: DEFAULT_MAX_OUTPUT
     row = store.get(d.record_id)
-    assert row.reserved_usd == pytest.approx(0.3 + 4096 * 15 / 1e6)
-    assert row.reserved_tokens == 100_000 + 4096
+    assert row.reserved_usd == pytest.approx(0.3 + DEFAULT_MAX_OUTPUT * 15 / 1e6)
+    assert row.reserved_tokens == 100_000 + DEFAULT_MAX_OUTPUT
+
+
+def test_worst_case_bounds_prompt_by_conservative_size(store, clock):
+    worst = make(store, clock, reserve="worst_case")
+    req = info(prompt=1000, max_out=0)
+    req.max_prompt_tokens = 1600
+    assert worst.reservation(req) == (pytest.approx(1600 * 3.0 / 1e6), 1600)
+
+
+def test_worst_case_server_held_prompt(store, clock):
+    worst = make(store, clock, reserve="worst_case")
+    prev = rec(clock)
+    prev.provider = Provider.OPENAI
+    prev.state = State.OK
+    prev.upstream_id = "resp_1"
+    prev.usage = Usage(input_tokens=40_000, cache_read=10_000, output_tokens=2_000)
+    store.insert(prev)
+
+    def req(**kw):
+        r = RequestInfo(Provider.OPENAI, Endpoint.RESPONSES, "cheap", True, 0, 100, **kw)
+        with store.read() as txn:
+            return worst.reservation(r, txn)[1]
+
+    assert req() == 100
+    assert req(previous_response_id="resp_1") == 100 + 52_000
+    assert req(previous_response_id="resp_unknown") == 100 + SERVER_CONTEXT_TOKENS
+    assert req(server_context=True) == 100 + SERVER_CONTEXT_TOKENS
+
+
+def test_worst_case_reserves_output_per_choice(store, clock):
+    worst = make(store, clock, reserve="worst_case")
+    req = info(prompt=100, max_out=1000)
+    req.choices = 3
+    assert worst.reservation(req)[1] == 100 + 3 * 1000
+    req.max_output_tokens = None
+    assert worst.reservation(req)[1] == 100 + 3 * DEFAULT_MAX_OUTPUT
+
+
+def test_worst_case_web_searches(store, clock):
+    seen = []
+
+    class Recording(FakePricing):
+        def max_cost(self, provider, model, prompt_tokens, output_tokens, **hints):
+            seen.append(hints["web_searches"])
+            return 0.0
+
+    worst = Budget([], store, Recording(), "worst_case", clock, tz=TZ)
+    for searches in (0, 3, None):
+        r = info(prompt=10, max_out=10)
+        r.web_searches = searches
+        worst.reservation(r)
+    assert seen == [0, 3, UNCAPPED_WEB_SEARCHES]
 
 
 def test_reservation_would_exceed(store, clock):

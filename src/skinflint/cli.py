@@ -279,6 +279,9 @@ def child_env(environ: Mapping[str, str], base: str) -> dict[str, str]:
         del env["PYTHONHOME"]
     env["ANTHROPIC_BASE_URL"] = base
     env["OPENAI_BASE_URL"] = f"{base}/v1"
+    # Claude Code turns tool search off behind a custom ANTHROPIC_BASE_URL and then sends
+    # every tool definition in full (~15k more prompt tokens per request); keep it on.
+    env.setdefault("ENABLE_TOOL_SEARCH", "true")
     return env
 
 

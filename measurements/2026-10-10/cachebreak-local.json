@@ -1,0 +1,1749 @@
+{
+ "claude_md-0": {
+  "session": "74d36813-5c6c-4019-a7bc-fb9341f7adfb",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591747.8739011,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "74d36813-5c6c-4019-a7bc-fb9341f7adfb",
+    "agent": "fp:9b6e11c3",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36109,
+    "cache_read": 26397,
+    "cache_write": 9702,
+    "input_tokens": 10,
+    "cacheable_tokens": 36087,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591749.9488158,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "74d36813-5c6c-4019-a7bc-fb9341f7adfb",
+    "agent": "fp:9b6e11c3",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.0749146938323975,
+    "prompt_tokens": 36303,
+    "cache_read": 36099,
+    "cache_write": 194,
+    "input_tokens": 10,
+    "cacheable_tokens": 36281,
+    "expected_read": 36008,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8630613710434735,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "claude_md-1": {
+  "session": "dda0bcdd-7e0e-4737-bb4c-039b0a54214c",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591752.4373946,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "dda0bcdd-7e0e-4737-bb4c-039b0a54214c",
+    "agent": "fp:f5f92aab",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36109,
+    "cache_read": 26397,
+    "cache_write": 9702,
+    "input_tokens": 10,
+    "cacheable_tokens": 36087,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591754.5461998,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "dda0bcdd-7e0e-4737-bb4c-039b0a54214c",
+    "agent": "fp:f5f92aab",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.1088051795959473,
+    "prompt_tokens": 36299,
+    "cache_read": 36099,
+    "cache_write": 190,
+    "input_tokens": 10,
+    "cacheable_tokens": 36277,
+    "expected_read": 36006,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8631090487238979,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "claude_md-2": {
+  "session": "ce65263a-160a-46f0-863e-04f3a4e3ce52",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591756.8326082,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "ce65263a-160a-46f0-863e-04f3a4e3ce52",
+    "agent": "fp:785b4dae",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36110,
+    "cache_read": 26397,
+    "cache_write": 9703,
+    "input_tokens": 10,
+    "cacheable_tokens": 36088,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591758.443679,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "ce65263a-160a-46f0-863e-04f3a4e3ce52",
+    "agent": "fp:785b4dae",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 1.6110708713531494,
+    "prompt_tokens": 36290,
+    "cache_read": 36100,
+    "cache_write": 180,
+    "input_tokens": 10,
+    "cacheable_tokens": 36268,
+    "expected_read": 36011,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8632182320441989,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "control-0": {
+  "session": "6048206b-b260-492f-8ec6-6243680a2de4",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591669.4122782,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "6048206b-b260-492f-8ec6-6243680a2de4",
+    "agent": "fp:214c243c",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591671.7677073,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "6048206b-b260-492f-8ec6-6243680a2de4",
+    "agent": "fp:214c243c",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.355429172515869,
+    "prompt_tokens": 36034,
+    "cache_read": 35964,
+    "cache_write": 60,
+    "input_tokens": 10,
+    "cacheable_tokens": 36012,
+    "expected_read": 35847,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660287745806021,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "control-1": {
+  "session": "661d710b-efaa-4223-a51b-468bb59dd4c7",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591674.735765,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "661d710b-efaa-4223-a51b-468bb59dd4c7",
+    "agent": "fp:1f73069d",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35975,
+    "cache_read": 26397,
+    "cache_write": 9568,
+    "input_tokens": 10,
+    "cacheable_tokens": 35953,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591677.9169228,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "661d710b-efaa-4223-a51b-468bb59dd4c7",
+    "agent": "fp:1f73069d",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 3.1811578273773193,
+    "prompt_tokens": 36056,
+    "cache_read": 35965,
+    "cache_write": 81,
+    "input_tokens": 10,
+    "cacheable_tokens": 36034,
+    "expected_read": 35845,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8657661284724633,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "control-2": {
+  "session": "4861023c-834c-447f-a844-e7d51350bf1d",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591680.187559,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "4861023c-834c-447f-a844-e7d51350bf1d",
+    "agent": "fp:c8b72f37",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591682.966895,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "4861023c-834c-447f-a844-e7d51350bf1d",
+    "agent": "fp:c8b72f37",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.7793362140655518,
+    "prompt_tokens": 36032,
+    "cache_read": 35964,
+    "cache_write": 58,
+    "input_tokens": 10,
+    "cacheable_tokens": 36010,
+    "expected_read": 35848,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660528289309224,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "mcp-0": {
+  "session": "f4ce62b6-bb28-472f-a066-2a6dc5f45d7b",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591731.17482,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "f4ce62b6-bb28-472f-a066-2a6dc5f45d7b",
+    "agent": "fp:abf3589d",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35979,
+    "cache_read": 26397,
+    "cache_write": 9572,
+    "input_tokens": 10,
+    "cacheable_tokens": 35957,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591733.808351,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "f4ce62b6-bb28-472f-a066-2a6dc5f45d7b",
+    "agent": "fp:2389122f",
+    "verdict": "prefix_changed",
+    "cause": "tools changed: ListMcpResourcesTool, ReadMcpResourceDirTool, ReadMcpResourceTool +9 more added",
+    "predecessor_id": 1,
+    "gap_s": 2.633531093597412,
+    "prompt_tokens": 37890,
+    "cache_read": 0,
+    "cache_write": 37880,
+    "input_tokens": 10,
+    "cacheable_tokens": 37868,
+    "expected_read": 28611,
+    "missed_tokens": 28611,
+    "extra_cost_usd": 0.0543609,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.3573488202087479,
+   "counts": {
+    "partial": 1,
+    "prefix_changed": 1
+   },
+   "extra_cost_usd": 0.0543609,
+   "missed_tokens": 28611,
+   "top_causes": [
+    {
+     "cause": "prefix_changed: tools changed: ListMcpResourcesTool, ReadMcpResourceDirTool, ReadMcpResourceTool +9 more added",
+     "count": 1,
+     "missed_tokens": 28611,
+     "extra_cost_usd": 0.0543609
+    },
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "mcp-1": {
+  "session": "5692b8c6-229d-4411-b2ba-8f89ff2d7cb9",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591737.1214075,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "5692b8c6-229d-4411-b2ba-8f89ff2d7cb9",
+    "agent": "fp:b08c6895",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35976,
+    "cache_read": 26397,
+    "cache_write": 9569,
+    "input_tokens": 10,
+    "cacheable_tokens": 35954,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591739.4772532,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "5692b8c6-229d-4411-b2ba-8f89ff2d7cb9",
+    "agent": "fp:6eecc5f7",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.3558456897735596,
+    "prompt_tokens": 37903,
+    "cache_read": 28250,
+    "cache_write": 9643,
+    "input_tokens": 10,
+    "cacheable_tokens": 37881,
+    "expected_read": 28605,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7396824537419294,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "mcp-2": {
+  "session": "565a958f-c6c8-4640-bb54-651269c6957a",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591742.2483008,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "565a958f-c6c8-4640-bb54-651269c6957a",
+    "agent": "fp:1fa86b8c",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35976,
+    "cache_read": 26397,
+    "cache_write": 9569,
+    "input_tokens": 10,
+    "cacheable_tokens": 35954,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591745.199715,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "565a958f-c6c8-4640-bb54-651269c6957a",
+    "agent": "fp:a061e4d4",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.951414108276367,
+    "prompt_tokens": 37887,
+    "cache_read": 28250,
+    "cache_write": 9627,
+    "input_tokens": 10,
+    "cacheable_tokens": 37865,
+    "expected_read": 28608,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7398426817215656,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "model-0": {
+  "session": "ea826e31-c8bc-47de-8da4-5f2ca2482ece",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591716.6237617,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "ea826e31-c8bc-47de-8da4-5f2ca2482ece",
+    "agent": "fp:3c6bd317",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35973,
+    "cache_read": 26397,
+    "cache_write": 9566,
+    "input_tokens": 10,
+    "cacheable_tokens": 35951,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591719.289203,
+    "model": "claude-haiku-5-5",
+    "session": "ea826e31-c8bc-47de-8da4-5f2ca2482ece",
+    "agent": "fp:1b3c698c",
+    "verdict": "cold",
+    "cause": "first request of this agent",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 44386,
+    "cache_read": 0,
+    "cache_write": 44384,
+    "input_tokens": 2,
+    "cacheable_tokens": 44356,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.3284884082678978,
+   "counts": {
+    "partial": 1,
+    "cold": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "cold",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    },
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "model-1": {
+  "session": "ff1e0945-5425-4efd-b8ca-157f855ee8c4",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591721.3412256,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "ff1e0945-5425-4efd-b8ca-157f855ee8c4",
+    "agent": "fp:2d1705ac",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591723.94276,
+    "model": "claude-haiku-5-5",
+    "session": "ff1e0945-5425-4efd-b8ca-157f855ee8c4",
+    "agent": "fp:23cf6f9f",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 44386,
+    "cache_read": 31571,
+    "cache_write": 12813,
+    "input_tokens": 2,
+    "cacheable_tokens": 44356,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7213539074166252,
+   "counts": {
+    "partial": 2
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 2,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "model-2": {
+  "session": "7c9ff7f2-615c-49f7-9641-41acc0ee399c",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591726.4891777,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "7c9ff7f2-615c-49f7-9641-41acc0ee399c",
+    "agent": "fp:6debeef7",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35973,
+    "cache_read": 26397,
+    "cache_write": 9566,
+    "input_tokens": 10,
+    "cacheable_tokens": 35951,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591728.9532135,
+    "model": "claude-haiku-5-5",
+    "session": "7c9ff7f2-615c-49f7-9641-41acc0ee399c",
+    "agent": "fp:a3b5d201",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 44386,
+    "cache_read": 31571,
+    "cache_write": 12813,
+    "input_tokens": 2,
+    "cacheable_tokens": 44356,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7213628840577907,
+   "counts": {
+    "partial": 2
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 2,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system-0": {
+  "session": "a807fbed-522c-4ad9-b0cf-c0d4ca6f4d05",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591701.9098828,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "a807fbed-522c-4ad9-b0cf-c0d4ca6f4d05",
+    "agent": "fp:3b15c37a",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35973,
+    "cache_read": 26397,
+    "cache_write": 9566,
+    "input_tokens": 10,
+    "cacheable_tokens": 35951,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591704.8696647,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "a807fbed-522c-4ad9-b0cf-c0d4ca6f4d05",
+    "agent": "fp:3b15c37a",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.9597818851470947,
+    "prompt_tokens": 36035,
+    "cache_read": 35963,
+    "cache_write": 62,
+    "input_tokens": 10,
+    "cacheable_tokens": 36013,
+    "expected_read": 35842,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660148872347517,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system-1": {
+  "session": "7b9d3883-a25d-4488-80c0-85ee43e52853",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591707.1054702,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "7b9d3883-a25d-4488-80c0-85ee43e52853",
+    "agent": "fp:69f9c0c5",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591709.2015214,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "7b9d3883-a25d-4488-80c0-85ee43e52853",
+    "agent": "fp:69f9c0c5",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.0960512161254883,
+    "prompt_tokens": 36029,
+    "cache_read": 35964,
+    "cache_write": 55,
+    "input_tokens": 10,
+    "cacheable_tokens": 36007,
+    "expected_read": 35848,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660889129619599,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system-2": {
+  "session": "5d61323d-ff0f-4184-a787-75dd6edcd481",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591711.4803853,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "5d61323d-ff0f-4184-a787-75dd6edcd481",
+    "agent": "fp:0d0ce3e4",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591713.930318,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "5d61323d-ff0f-4184-a787-75dd6edcd481",
+    "agent": "fp:0d0ce3e4",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.449932813644409,
+    "prompt_tokens": 36034,
+    "cache_read": 35964,
+    "cache_write": 60,
+    "input_tokens": 10,
+    "cacheable_tokens": 36012,
+    "expected_read": 35847,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660287745806021,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "tools-0": {
+  "session": "d68c8c7b-7bfb-4551-82be-de09f50b1f2a",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591685.1320298,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "d68c8c7b-7bfb-4551-82be-de09f50b1f2a",
+    "agent": "fp:42d5bcd2",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591688.632931,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "d68c8c7b-7bfb-4551-82be-de09f50b1f2a",
+    "agent": "fp:f6b06caf",
+    "verdict": "prefix_changed",
+    "cause": "tools changed: NotebookEdit removed",
+    "predecessor_id": 1,
+    "gap_s": 3.500901222229004,
+    "prompt_tokens": 35553,
+    "cache_read": 25921,
+    "cache_write": 9622,
+    "input_tokens": 10,
+    "cacheable_tokens": 35531,
+    "expected_read": 35514,
+    "missed_tokens": 9593,
+    "extra_cost_usd": 0.018226700000000002,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7314440700714415,
+   "counts": {
+    "partial": 1,
+    "prefix_changed": 1
+   },
+   "extra_cost_usd": 0.018226700000000002,
+   "missed_tokens": 9593,
+   "top_causes": [
+    {
+     "cause": "prefix_changed: tools changed: NotebookEdit removed",
+     "count": 1,
+     "missed_tokens": 9593,
+     "extra_cost_usd": 0.018226700000000002
+    },
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "tools-1": {
+  "session": "587d0786-f451-445d-a9af-b536ee2b93a0",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591691.4839003,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "587d0786-f451-445d-a9af-b536ee2b93a0",
+    "agent": "fp:139f9e93",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591694.1197288,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "587d0786-f451-445d-a9af-b536ee2b93a0",
+    "agent": "fp:02783862",
+    "verdict": "prefix_changed",
+    "cause": "tools changed: NotebookEdit removed",
+    "predecessor_id": 1,
+    "gap_s": 2.6358284950256348,
+    "prompt_tokens": 35553,
+    "cache_read": 25921,
+    "cache_write": 9622,
+    "input_tokens": 10,
+    "cacheable_tokens": 35531,
+    "expected_read": 35514,
+    "missed_tokens": 9593,
+    "extra_cost_usd": 0.018226700000000002,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7314440700714415,
+   "counts": {
+    "partial": 1,
+    "prefix_changed": 1
+   },
+   "extra_cost_usd": 0.018226700000000002,
+   "missed_tokens": 9593,
+   "top_causes": [
+    {
+     "cause": "prefix_changed: tools changed: NotebookEdit removed",
+     "count": 1,
+     "missed_tokens": 9593,
+     "extra_cost_usd": 0.018226700000000002
+    },
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "tools-2": {
+  "session": "e251f122-0371-4eb3-a71e-c960a7aa30f2",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591697.1679966,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "e251f122-0371-4eb3-a71e-c960a7aa30f2",
+    "agent": "fp:95c8a2a0",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35974,
+    "cache_read": 26397,
+    "cache_write": 9567,
+    "input_tokens": 10,
+    "cacheable_tokens": 35952,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591699.3148127,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "e251f122-0371-4eb3-a71e-c960a7aa30f2",
+    "agent": "fp:3c6b7647",
+    "verdict": "prefix_changed",
+    "cause": "tools changed: NotebookEdit removed",
+    "predecessor_id": 1,
+    "gap_s": 2.1468160152435303,
+    "prompt_tokens": 35563,
+    "cache_read": 25921,
+    "cache_write": 9632,
+    "input_tokens": 10,
+    "cacheable_tokens": 35541,
+    "expected_read": 35524,
+    "missed_tokens": 9603,
+    "extra_cost_usd": 0.0182457,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.7313418231125152,
+   "counts": {
+    "partial": 1,
+    "prefix_changed": 1
+   },
+   "extra_cost_usd": 0.0182457,
+   "missed_tokens": 9603,
+   "top_causes": [
+    {
+     "cause": "prefix_changed: tools changed: NotebookEdit removed",
+     "count": 1,
+     "missed_tokens": 9603,
+     "extra_cost_usd": 0.0182457
+    },
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "ttl-0": {
+  "session": "4a2d5caa-9987-4dfb-96c7-afd6cbe925fc",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591669.4622974,
+    "model": "claude-sonnet-4-6",
+    "session": "4a2d5caa-9987-4dfb-96c7-afd6cbe925fc",
+    "agent": "fp:52cdbe0e",
+    "verdict": "cold",
+    "cause": "first request of this agent",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35206,
+    "cache_read": 0,
+    "cache_write": 35203,
+    "input_tokens": 3,
+    "cacheable_tokens": 35184,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592002.375929,
+    "model": "claude-sonnet-4-6",
+    "session": "4a2d5caa-9987-4dfb-96c7-afd6cbe925fc",
+    "agent": "fp:52cdbe0e",
+    "verdict": "expired",
+    "cause": "5m33s since the previous request exceeds the 5m00s cache lifetime",
+    "predecessor_id": 1,
+    "gap_s": 332.91363167762756,
+    "prompt_tokens": 35218,
+    "cache_read": 25804,
+    "cache_write": 9411,
+    "input_tokens": 3,
+    "cacheable_tokens": 35196,
+    "expected_read": 35179,
+    "missed_tokens": 9375,
+    "extra_cost_usd": 0.03234375,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.3664091786890833,
+   "counts": {
+    "cold": 1,
+    "expired": 1
+   },
+   "extra_cost_usd": 0.03234375,
+   "missed_tokens": 9375,
+   "top_causes": [
+    {
+     "cause": "expired",
+     "count": 1,
+     "missed_tokens": 9375,
+     "extra_cost_usd": 0.03234375
+    },
+    {
+     "cause": "cold",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "ttl-1": {
+  "session": "d7b1613c-e27a-42eb-95e3-b26f99b32f5b",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591669.4400806,
+    "model": "claude-sonnet-4-6",
+    "session": "d7b1613c-e27a-42eb-95e3-b26f99b32f5b",
+    "agent": "fp:2e2f3a48",
+    "verdict": "cold",
+    "cause": "first request of this agent",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35205,
+    "cache_read": 0,
+    "cache_write": 35202,
+    "input_tokens": 3,
+    "cacheable_tokens": 35183,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592002.8440304,
+    "model": "claude-sonnet-4-6",
+    "session": "d7b1613c-e27a-42eb-95e3-b26f99b32f5b",
+    "agent": "fp:2e2f3a48",
+    "verdict": "expired",
+    "cause": "5m33s since the previous request exceeds the 5m00s cache lifetime",
+    "predecessor_id": 1,
+    "gap_s": 333.4039497375488,
+    "prompt_tokens": 35217,
+    "cache_read": 25804,
+    "cache_write": 9410,
+    "input_tokens": 3,
+    "cacheable_tokens": 35195,
+    "expected_read": 35178,
+    "missed_tokens": 9374,
+    "extra_cost_usd": 0.0323403,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.3664195847888444,
+   "counts": {
+    "cold": 1,
+    "expired": 1
+   },
+   "extra_cost_usd": 0.0323403,
+   "missed_tokens": 9374,
+   "top_causes": [
+    {
+     "cause": "expired",
+     "count": 1,
+     "missed_tokens": 9374,
+     "extra_cost_usd": 0.0323403
+    },
+    {
+     "cause": "cold",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "ttl-2": {
+  "session": "82d9538a-8a0d-4eec-a38e-9f6216281e05",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591669.4526072,
+    "model": "claude-sonnet-4-6",
+    "session": "82d9538a-8a0d-4eec-a38e-9f6216281e05",
+    "agent": "fp:0bd2bbe0",
+    "verdict": "cold",
+    "cause": "first request of this agent",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35207,
+    "cache_read": 0,
+    "cache_write": 35204,
+    "input_tokens": 3,
+    "cacheable_tokens": 35185,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592001.3057702,
+    "model": "claude-sonnet-4-6",
+    "session": "82d9538a-8a0d-4eec-a38e-9f6216281e05",
+    "agent": "fp:0bd2bbe0",
+    "verdict": "expired",
+    "cause": "5m32s since the previous request exceeds the 5m00s cache lifetime",
+    "predecessor_id": 1,
+    "gap_s": 331.8531630039215,
+    "prompt_tokens": 35219,
+    "cache_read": 0,
+    "cache_write": 35216,
+    "input_tokens": 3,
+    "cacheable_tokens": 35197,
+    "expected_read": 35180,
+    "missed_tokens": 35180,
+    "extra_cost_usd": 0.121371,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.0,
+   "counts": {
+    "cold": 1,
+    "expired": 1
+   },
+   "extra_cost_usd": 0.121371,
+   "missed_tokens": 35180,
+   "top_causes": [
+    {
+     "cause": "expired",
+     "count": 1,
+     "missed_tokens": 35180,
+     "extra_cost_usd": 0.121371
+    },
+    {
+     "cause": "cold",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "git-0": {
+  "session": "1a5e4e7a-3622-4a96-a337-42b5f2635e7f",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791591995.8932307,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "1a5e4e7a-3622-4a96-a337-42b5f2635e7f",
+    "agent": "fp:20761559",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36054,
+    "cache_read": 26397,
+    "cache_write": 9647,
+    "input_tokens": 10,
+    "cacheable_tokens": 36032,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791591998.392019,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "1a5e4e7a-3622-4a96-a337-42b5f2635e7f",
+    "agent": "fp:20761559",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.498788356781006,
+    "prompt_tokens": 36119,
+    "cache_read": 36044,
+    "cache_write": 65,
+    "input_tokens": 10,
+    "cacheable_tokens": 36097,
+    "expected_read": 35925,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8651573303035761,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "git-1": {
+  "session": "94cbc175-ad67-4502-8ad3-7f18e45483b1",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791592000.7384558,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "94cbc175-ad67-4502-8ad3-7f18e45483b1",
+    "agent": "fp:caa8f6c9",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36050,
+    "cache_read": 26397,
+    "cache_write": 9643,
+    "input_tokens": 10,
+    "cacheable_tokens": 36028,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592003.321404,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "94cbc175-ad67-4502-8ad3-7f18e45483b1",
+    "agent": "fp:caa8f6c9",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.5829482078552246,
+    "prompt_tokens": 36114,
+    "cache_read": 36040,
+    "cache_write": 64,
+    "input_tokens": 10,
+    "cacheable_tokens": 36092,
+    "expected_read": 35921,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8652097999002273,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "git-2": {
+  "session": "2f0ae00c-62dc-4057-9e2b-97bc316b3393",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791592007.0114942,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "2f0ae00c-62dc-4057-9e2b-97bc316b3393",
+    "agent": "fp:cff42b94",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 36052,
+    "cache_read": 26397,
+    "cache_write": 9645,
+    "input_tokens": 10,
+    "cacheable_tokens": 36030,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592008.8899457,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "2f0ae00c-62dc-4057-9e2b-97bc316b3393",
+    "agent": "fp:cff42b94",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 1.8784515857696533,
+    "prompt_tokens": 36110,
+    "cache_read": 36042,
+    "cache_write": 58,
+    "input_tokens": 10,
+    "cacheable_tokens": 36088,
+    "expected_read": 35924,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8652614949696517,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system_full-0": {
+  "session": "2bdd37e2-9351-40ce-9661-0e7891da071c",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791592010.851796,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "2bdd37e2-9351-40ce-9661-0e7891da071c",
+    "agent": "fp:fecab684",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35979,
+    "cache_read": 26397,
+    "cache_write": 9572,
+    "input_tokens": 10,
+    "cacheable_tokens": 35957,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592014.2662876,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "2bdd37e2-9351-40ce-9661-0e7891da071c",
+    "agent": "fp:fecab684",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 3.414491653442383,
+    "prompt_tokens": 36037,
+    "cache_read": 35969,
+    "cache_write": 58,
+    "input_tokens": 10,
+    "cacheable_tokens": 36015,
+    "expected_read": 35853,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660019995556543,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system_full-1": {
+  "session": "e8766de9-5f1d-4919-8c11-bcd7fc2df548",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791592016.4368193,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "e8766de9-5f1d-4919-8c11-bcd7fc2df548",
+    "agent": "fp:31e7f3d5",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35979,
+    "cache_read": 26397,
+    "cache_write": 9572,
+    "input_tokens": 10,
+    "cacheable_tokens": 35957,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592018.619627,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "e8766de9-5f1d-4919-8c11-bcd7fc2df548",
+    "agent": "fp:31e7f3d5",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.182807683944702,
+    "prompt_tokens": 36032,
+    "cache_read": 35969,
+    "cache_write": 53,
+    "input_tokens": 10,
+    "cacheable_tokens": 36010,
+    "expected_read": 35856,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8660621293968978,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ },
+ "system_full-2": {
+  "session": "7b79d7ee-2659-45e3-994f-95831452edbe",
+  "events": [
+   {
+    "record_id": 1,
+    "ts": 1791592020.8244758,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "7b79d7ee-2659-45e3-994f-95831452edbe",
+    "agent": "fp:aa5ff081",
+    "verdict": "partial",
+    "cause": "no earlier request from this agent; read a cache shared with another",
+    "predecessor_id": null,
+    "gap_s": null,
+    "prompt_tokens": 35978,
+    "cache_read": 26397,
+    "cache_write": 9571,
+    "input_tokens": 10,
+    "cacheable_tokens": 35956,
+    "expected_read": 0,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   },
+   {
+    "record_id": 2,
+    "ts": 1791592022.9125721,
+    "model": "claude-haiku-4-5-20251001",
+    "session": "7b79d7ee-2659-45e3-994f-95831452edbe",
+    "agent": "fp:aa5ff081",
+    "verdict": "hit",
+    "cause": null,
+    "predecessor_id": 1,
+    "gap_s": 2.0880963802337646,
+    "prompt_tokens": 36041,
+    "cache_read": 35968,
+    "cache_write": 63,
+    "input_tokens": 10,
+    "cacheable_tokens": 36019,
+    "expected_read": 35853,
+    "missed_tokens": 0,
+    "extra_cost_usd": 0.0,
+    "api_reason": null
+   }
+  ],
+  "summary": {
+   "requests": 2,
+   "hit_rate": 0.8659520404337744,
+   "counts": {
+    "hit": 1,
+    "partial": 1
+   },
+   "extra_cost_usd": 0.0,
+   "missed_tokens": 0,
+   "top_causes": [
+    {
+     "cause": "partial",
+     "count": 1,
+     "missed_tokens": 0,
+     "extra_cost_usd": 0.0
+    }
+   ]
+  }
+ }
+}

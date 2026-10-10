@@ -12,7 +12,7 @@ from skinflint.model import Price, Record, Usage
 
 NO_DATA = "no requests recorded yet; start the proxy with `skinflint serve`"
 NOTIONAL = "subscription traffic: costs are API-equivalent, not billed"
-ESTIMATED = "~ estimated: no exact price for the model"
+ESTIMATED = "~ estimated: no exact price for the model, or a stream cut off before its usage"
 
 
 def cost(usd: float, estimated: bool = False) -> str:

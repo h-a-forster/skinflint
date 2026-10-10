@@ -7,6 +7,48 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+
+- `skinflint run` sets `ENABLE_TOOL_SEARCH=true` in the child's environment unless the
+  variable is already set (any value, including empty, is kept).
+
+### Fixed
+
+- `reserve = "worst_case"` now also reserves output `n` times for OpenAI Chat `n`, counts
+  images sent by URL or file id at 5,000 tokens, and reserves a full context window for
+  documents and files sent by URL or file id and for OpenAI Responses stored prompt templates.
+- `reserve = "worst_case"` could under-reserve. It now prices fast mode, `inference_geo`,
+  OpenAI service tiers (the dearest one when the request leaves the tier unset or `auto`,
+  since a project default can select priority), web search fees (`max_uses`, 50 searches
+  when uncapped), the server-held prompt behind `previous_response_id` (looked up in the
+  ledger, else 1.05M tokens) and `conversation`, and 128,000 output tokens when the request
+  sets no limit. It sizes the prompt at 2.5 chars per token and 5,000 tokens per image.
+- Streams cut off before their final usage (a client pressing Esc, a dropped connection)
+  booked almost no output: Anthropic sends `output_tokens` only in the last `message_delta`,
+  OpenAI sends no usage until the end. They are now settled with output estimated from the
+  streamed content (ASCII at 3 chars per token, other text at one token per UTF-8 byte) and,
+  when the stream reported no input, input from the conservative prompt bound. Hidden thinking
+  is not counted. The ledger marks the cost as estimated.
+- On Windows the listener no longer sets `SO_REUSEADDR` and binds with `SO_EXCLUSIVEADDRUSE`,
+  so a second process cannot bind port 4100 at the same time, even with `SO_REUSEADDR`.
+
+### Docs
+
+- README wording on provider limits and request forwarding.
+- Corrected the worst-case premise: the measured reservations fit 128,000 output tokens, not
+  32,000. The `reserve = "estimate"` overshoot bound is now $2.56 per in-flight request on
+  Opus 5.5.
+- Corrected the tokenizer note: newer tokenizers gave fewer tokens than Haiku 4.5, not more.
+- The tool search effect was measured through skinflint only; the docs no longer say "any
+  proxy".
+- Quantified how far `reserve = "estimate"` can overshoot.
+- Results from live runs on 2026-10-10: Claude Code's fixed context on three versions, caps
+  under 4-8 parallel agents with killed clients, and nine cache breakers checked against the
+  API's diagnostics. Raw data in `measurements/`, scripts in `scripts/measure/`.
+- Behind a proxy Claude Code turns tool search off, which made every request about 67% larger
+  in these runs. The client docs and README now set `ENABLE_TOOL_SEARCH=true`, and the
+  2026-10-09 token counts carry a correction.
+
 ## 0.1.0 - 2026-10-09
 
 ### Added

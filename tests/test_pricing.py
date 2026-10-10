@@ -124,18 +124,79 @@ def test_long_tier_cache_rates(pricing):
 
 
 def test_max_cost(pricing):
+    std = {"inference_geo": "global"}
     # Anthropic: 1h write ($2) beats input ($1) on Haiku 4.5
-    assert pricing.max_cost(ANT, "claude-haiku-4-5", 1_000_000, 1_000_000) == pytest.approx(7.0)
+    assert pricing.max_cost(ANT, "claude-haiku-4-5", 1_000_000, 1_000_000, **std) == (
+        pytest.approx(7.0)
+    )
     # Haiku 5.5 above 100k: long 1h write $1 + long output $2.50
-    assert pricing.max_cost(ANT, "claude-haiku-5-5", 200_000, 100_000) == pytest.approx(
+    assert pricing.max_cost(ANT, "claude-haiku-5-5", 200_000, 100_000, **std) == pytest.approx(
         (200_000 * 1.0 + 100_000 * 2.5) / 1e6
     )
-    assert pricing.max_cost(ANT, "claude-haiku-5-5", 100_000, 0) == pytest.approx(0.02)
+    assert pricing.max_cost(ANT, "claude-haiku-5-5", 100_000, 0, **std) == pytest.approx(0.02)
     # OpenAI gpt-6-sol: write $2.50 > input $2
-    assert pricing.max_cost(OAI, "gpt-6-sol", 100_000, 0) == pytest.approx(0.25)
-    assert pricing.max_cost(OAI, "gpt-5.4", 300_000, 1000) == pytest.approx(
+    std = {"service_tier": "default"}
+    assert pricing.max_cost(OAI, "gpt-6-sol", 100_000, 0, **std) == pytest.approx(0.25)
+    assert pricing.max_cost(OAI, "gpt-5.4", 300_000, 1000, **std) == pytest.approx(
         (300_000 * 5 + 1000 * 22.5) / 1e6
     )
+
+
+def worst_bill(pricing, provider, model, prompt, out, **labels):
+    """The dearest real bill for this size: every input token as the dearest input kind."""
+    best = 0.0
+    for kind in ("input_tokens", "cache_write_5m", "cache_write_1h"):
+        usage = Usage(**{kind: prompt}, output_tokens=out, **labels)
+        best = max(best, pricing.cost(provider, model, usage)[0])
+    return best
+
+
+def test_max_cost_covers_fast_mode_and_us_inference(pricing):
+    # The review's probe: Opus 5.5, 50k in / 32k out, fast + us bills about $1.85.
+    labels = {"speed": "fast", "inference_geo": "us"}
+    bill = pricing.cost(
+        ANT, "claude-opus-5-5", Usage(input_tokens=50_000, output_tokens=32_000, **labels)
+    )[0]
+    assert bill == pytest.approx(1.848)
+    bound = pricing.max_cost(ANT, "claude-opus-5-5", 50_000, 32_000, **labels)
+    assert bound >= worst_bill(pricing, ANT, "claude-opus-5-5", 50_000, 32_000, **labels)
+    assert bound == pytest.approx((50_000 * 16 + 32_000 * 40) / 1e6 * 1.1)
+    # Unset geo: a workspace default may be "us", so the bound assumes it.
+    assert pricing.max_cost(ANT, "claude-opus-5-5", 50_000, 32_000) == pytest.approx(1.04 * 1.1)
+    assert pricing.max_cost(
+        ANT, "claude-opus-5-5", 50_000, 32_000, inference_geo="global"
+    ) == pytest.approx(1.04)
+
+
+@pytest.mark.parametrize(
+    ("model", "tier", "mult"),
+    [
+        ("gpt-6-sol", None, 2.0),  # unset: the project default may be priority
+        ("gpt-6-sol", "auto", 2.0),
+        ("gpt-6-sol", "priority", 2.0),
+        ("gpt-6-sol", "flex", 0.5),
+        ("gpt-6-sol", "default", 1.0),
+        ("gpt-5.5", None, 2.5),  # per-model override
+        ("gpt-5.5", "priority", 2.5),
+        ("gpt-5.5", "something-new", 2.5),
+    ],
+)
+def test_max_cost_service_tier(pricing, model, tier, mult):
+    base = pricing.max_cost(OAI, model, 10_000, 1000, service_tier="default")
+    got = pricing.max_cost(OAI, model, 10_000, 1000, service_tier=tier)
+    assert got == pytest.approx(base * mult)
+    labels = {"service_tier": tier} if tier not in (None, "auto") else {"service_tier": "priority"}
+    assert got >= worst_bill(pricing, OAI, model, 10_000, 1000, **labels) - 1e-12
+
+
+def test_max_cost_web_search_fee(pricing):
+    base = pricing.max_cost(ANT, "claude-sonnet-5-5", 1000, 100, inference_geo="global")
+    got = pricing.max_cost(
+        ANT, "claude-sonnet-5-5", 1000, 100, inference_geo="global", web_searches=5
+    )
+    assert got == pytest.approx(base + 5 * 10 / 1000)
+    usage = Usage(input_tokens=1000, output_tokens=100, web_search_requests=5)
+    assert got >= pricing.cost(ANT, "claude-sonnet-5-5", usage)[0]
 
 
 @pytest.mark.parametrize(

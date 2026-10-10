@@ -8,6 +8,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS, client_name, detect
 from skinflint.providers.anthropic import AnthropicAdapter
+from skinflint.providers.base import BOUND_MEDIA_TOKENS, estimate_unfinished, output_chars
 
 CC = Path(__file__).parent / "fixtures" / "claude_code"
 SESSION = "11111111-2222-3333-4444-555555555555"
@@ -105,6 +106,40 @@ def test_parse_request_counts_images_as_fixed_size():
     image = {"type": "image", "source": {"type": "base64", "data": "A" * 4_000_000}}
     body = {"model": "m", "messages": [{"role": "user", "content": [image]}]}
     assert adapter.parse_request(Endpoint.MESSAGES, body).est_prompt_tokens < 5000
+
+
+@pytest.mark.parametrize(
+    ("name", "real"),
+    [("first_turn", 57845), ("tool_turn", 58217), ("side_request", 4604)],
+)
+def test_parse_request_worst_case_bound_covers_real_prompt(name, real):
+    body = json.loads((CC / f"{name}.request.json").read_text(encoding="utf-8"))
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert info.est_prompt_tokens < real  # the plain estimate runs ~7% low here
+    # The bound leaves room for a tokenizer ~35% hungrier than Haiku 4.5's.
+    assert info.max_prompt_tokens > 1.35 * real
+
+
+def test_parse_request_worst_case_hints():
+    body = {
+        "model": "claude-opus-5-5",
+        "max_tokens": 10,
+        "speed": "fast",
+        "inference_geo": "us",
+        "service_tier": "auto",
+        "tools": [
+            {"type": "web_search_20260209", "name": "web_search", "max_uses": 4},
+            {"type": "web_search_20250305", "name": "web_search_old", "max_uses": 2},
+            {"name": "Bash", "input_schema": {}},
+        ],
+        "messages": [],
+    }
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert (info.speed, info.inference_geo, info.service_tier) == ("fast", "us", "auto")
+    assert info.web_searches == 6
+    body["tools"].append({"type": "web_search_20260209", "name": "uncapped"})
+    assert adapter.parse_request(Endpoint.MESSAGES, body).web_searches is None
+    assert adapter.parse_request(Endpoint.MESSAGES, {"model": "m"}).web_searches == 0
 
 
 def test_parse_request_malformed_body():
@@ -426,3 +461,54 @@ def test_ratelimit_headers_subset_lowercased():
         "anthropic-ratelimit-unified-5h-utilization": "0.42",
         "anthropic-ratelimit-unified-status": "allowed",
     }
+
+
+# --- cut-off stream estimate ------------------------------------------------------------
+
+
+def test_output_chars_ascii_unchanged():
+    assert output_chars("") == 0
+    assert output_chars("hello, world") == 12
+
+
+@pytest.mark.parametrize("text", ["你好世界" * 10, "🙂🙂🙂", "naïve café ✓"])
+def test_output_chars_weights_non_ascii_bytes(text):
+    ascii_chars = sum(c.isascii() for c in text)
+    non_ascii_bytes = len(text.encode()) - ascii_chars
+    assert output_chars(text) == ascii_chars + 3 * non_ascii_bytes
+    assert output_chars(text) >= 3 * len(text.encode()) - 2 * ascii_chars
+
+
+def test_cjk_stream_estimates_one_token_per_byte():
+    text = "你好世界" * 25  # 100 chars, 300 bytes
+    event = {"type": "content_block_delta", "delta": {"type": "text_delta", "text": text}}
+    tracker, _ = run(sse(("content_block_delta", event)))
+    assert tracker.streamed_chars == 3 * len(text.encode())
+    assert estimate_unfinished(Usage(), tracker.streamed_chars, 0).output_tokens == 300
+
+
+def test_unfinished_input_fallback_uses_the_bound():
+    body = {"model": "m", "messages": [{"role": "user", "content": "x" * 4000}]}
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    bound = max(info.max_prompt_tokens, info.est_prompt_tokens)
+    assert info.max_prompt_tokens > info.est_prompt_tokens
+    assert estimate_unfinished(Usage(), 0, bound).input_tokens == bound
+    assert estimate_unfinished(Usage(input_tokens=5), 0, bound) is None
+
+
+@pytest.mark.parametrize(
+    ("block", "image", "document"),
+    [
+        ({"type": "image", "source": {"type": "url", "url": "https://x/a.png"}}, 1, False),
+        ({"type": "image", "source": {"type": "file", "file_id": "file_1"}}, 1, False),
+        ({"type": "document", "source": {"type": "url", "url": "https://x/a.pdf"}}, 0, True),
+        ({"type": "document", "source": {"type": "file", "file_id": "file_1"}}, 0, True),
+        ({"type": "document", "source": {"type": "text", "data": "hi"}}, 0, False),
+        ({"type": "text", "text": "hi"}, 0, False),
+    ],
+)
+def test_parse_request_inputs_by_reference(block, image, document):
+    body = {"model": "m", "max_tokens": 1, "messages": [{"role": "user", "content": [block]}]}
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    assert info.server_context is document
+    assert (info.max_prompt_tokens >= BOUND_MEDIA_TOKENS) is bool(image)

@@ -279,6 +279,17 @@ class Txn:
         usd, tokens, requests = self._conn.execute(sql, args).fetchone()
         return Spend(usd=float(usd), tokens=int(tokens), requests=int(requests))
 
+    def response_tokens(self, provider: Provider, upstream_id: str) -> int | None:
+        """Prompt plus output tokens of the settled response with this upstream id: what a
+        request continuing it (OpenAI previous_response_id) reads again. None if unknown."""
+        row = self._conn.execute(
+            f"""SELECT {TOTAL_TOKENS_SQL} FROM requests
+            WHERE provider = ? AND upstream_id = ? AND state = 'ok'
+            ORDER BY id DESC LIMIT 1""",
+            (provider.value, upstream_id),
+        ).fetchone()
+        return None if row is None else int(row[0])
+
     def insert(self, record: Record) -> int:
         cols = ", ".join(COLUMNS)
         marks = ", ".join("?" * len(COLUMNS))

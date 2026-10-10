@@ -427,6 +427,41 @@ async def test_budget_blocks_openai_with_insufficient_quota(make):
     assert h.fake.requests == []
 
 
+async def test_estimate_overshoot_is_bounded_by_in_flight_output(make):
+    # reserve = "estimate" holds only the prompt at the input rate. Requests already admitted
+    # can each overshoot the cap by what that leaves out: max_tokens of output, plus the
+    # cache-write premium on the prompt (docs/configuration.md, Reservations).
+    h = await make()
+    from skinflint.providers import ADAPTERS
+
+    body = msg_body(max_tokens=32000)
+    req = ADAPTERS[Provider.ANTHROPIC].parse_request(Endpoint.MESSAGES, body)
+    reserve, _ = h.proxy.budget.reservation(req)
+    prompt = req.est_prompt_tokens
+    bound = h.proxy.pricing.max_cost(
+        Provider.ANTHROPIC, MODEL, prompt, 32000, inference_geo="global"
+    )
+    cap = reserve * 4.5
+    h.proxy.budget.rules = [BudgetRule(name="cap", usd=cap)]
+    # Every admitted request writes its whole prompt to the 1h cache and uses all its output.
+    usage = {
+        "input_tokens": 0,
+        "cache_creation_input_tokens": prompt,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": prompt},
+        "output_tokens": 32000,
+    }
+    h.fake.reply(*[stream(anthropic_events(usage=usage), head_delay=0.3) for _ in range(12)])
+    responses = await asyncio.gather(*(h.messages(body) for _ in range(12)))
+    for r in responses:
+        await r.read()
+    assert Counter(r.status for r in responses) == {200: 4, 402: 8}
+    spend = sum(r.cost_usd for r in await h.records())
+    assert spend > cap  # the overshoot is real...
+    assert spend <= cap + 4 * (bound - reserve) + 1e-9  # ...and bounded per in-flight request
+    assert spend == pytest.approx(4 * bound)
+
+
 async def test_concurrent_admission_never_exceeds_cap(make):
     h = await make()
     info = h.proxy.budget  # reservation for one request, computed the same way as admit()
@@ -519,9 +554,88 @@ async def test_client_disconnect_mid_stream(make, cancel):
     await wait_for(lambda: h.fake.disconnects == 1 and h.fake.active == 0)
     (rec,) = await h.records()
     assert rec.state is State.ABORTED
-    assert rec.error == ("cancelled" if cancel else "client disconnected")
-    assert rec.usage.cache_read == 50000 and rec.usage.output_tokens == 1
+    assert rec.error.startswith("cancelled" if cancel else "client disconnected")
+    assert rec.usage.cache_read == 50000 and rec.usage.output_tokens >= 1
     assert rec.cost_usd > 0
+
+
+async def read_until(resp, marker: bytes, count: int) -> bytes:
+    seen = b""
+    while seen.count(marker) < count or not seen.endswith(b"\n\n"):
+        seen += await resp.content.readany()
+    return seen
+
+
+def streamed_text(seen: bytes, key: str) -> int:
+    """Characters of `key` fields in the JSON events the client received."""
+    total = 0
+    for line in seen.split(b"\n"):
+        if line.startswith(b"data: {"):
+            obj = json.loads(line[6:])
+            stack = [obj]
+            while stack:
+                o = stack.pop()
+                if isinstance(o, dict):
+                    for k, v in o.items():
+                        if k == key and isinstance(v, str):
+                            total += len(v)
+                        else:
+                            stack.append(v)
+                elif isinstance(o, list):
+                    stack.extend(o)
+    return total
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_aborted_anthropic_stream_estimates_output(make, cancel):
+    # Anthropic reports output_tokens only in the final message_delta. A client that hangs
+    # up (Esc in Claude Code) must not book the message_start count (1) as the output.
+    h = await make(handler_cancellation=cancel)
+    h.fake.reply(stream(anthropic_events(text="x" * 60, deltas=500), delay=0.01))
+    resp = await h.messages()
+    seen = await read_until(resp, b"event: content_block_delta", 50)
+    resp.close()
+    await wait_for(lambda: h.fake.disconnects == 1 and h.fake.active == 0)
+    (rec,) = await h.records()
+    assert rec.state is State.ABORTED and "usage estimated from" in rec.error
+    chars = streamed_text(seen, "text")
+    assert chars >= 50 * 60
+    assert rec.usage.output_tokens >= chars // 3 >= 1000
+    assert rec.usage.cache_read == 50000  # input from message_start stays as reported
+    assert rec.cost_estimated
+    output_cost = rec.usage.output_tokens * 5.0 / 1e6  # Haiku 4.5 output rate
+    assert rec.cost_usd > output_cost
+
+
+@pytest.mark.parametrize("endpoint", ["chat", "responses"])
+async def test_aborted_openai_stream_estimates_usage(make, endpoint):
+    # OpenAI streams carry no usage until the end: an abort used to book $0.
+    h = await make()
+    if endpoint == "chat":
+        events, marker, key = chat_events(deltas=500), b'"content"', "content"
+        path, body = "/v1/chat/completions", chat_body()
+    else:
+        events, marker, key = responses_events(deltas=500), b"output_text.delta", "delta"
+        path, body = "/v1/responses", {"model": "gpt-5.4", "input": "hi " * 4000, "stream": True}
+    h.fake.reply(stream(events, delay=0.01))
+    resp = await h.post(path, body)
+    seen = await read_until(resp, marker, 50)
+    resp.close()
+    await wait_for(lambda: h.fake.disconnects == 1 and h.fake.active == 0)
+    (rec,) = await h.records()
+    assert rec.state is State.ABORTED and "usage estimated from" in rec.error
+    assert rec.usage.output_tokens >= streamed_text(seen, key) // 3 > 0
+    assert rec.usage.input_tokens > 0  # the request estimate stands in for the input
+    assert rec.cost_estimated and rec.cost_usd > 0
+
+
+async def test_finished_stream_keeps_reported_usage(h):
+    h.fake.reply(stream(anthropic_events(text="x" * 600, deltas=50)))
+    resp = await h.messages()
+    await resp.read()
+    (rec,) = await h.records()
+    assert rec.state is State.OK and rec.error is None and not rec.cost_estimated
+    assert rec.usage.output_tokens == 300  # the provider's count, not the char estimate
 
 
 async def test_shutdown_with_stream_in_flight_settles_row(make):
@@ -825,6 +939,87 @@ def test_embedded_runs_and_shuts_down(tmp_path):
     with Store(cfg.db_path) as store:
         (rec,) = store.records()
         assert rec.state is State.ERROR and rec.status == 502
+
+
+def test_second_proxy_cannot_bind_the_same_port(tmp_path):
+    dead = f"http://127.0.0.1:{free_port()}"
+    upstreams = {Provider.ANTHROPIC: dead, Provider.OPENAI: dead}
+    first = Config(port=0, db_path=tmp_path / "a.db", upstreams=upstreams)
+    with embedded(first) as base:
+        port = int(base.rsplit(":", 1)[1])
+        second = Config(port=port, db_path=tmp_path / "b.db", upstreams=upstreams)
+        with pytest.raises(OSError), embedded(second):
+            pass
+
+
+def test_listen_socket_is_exclusive_and_serves(monkeypatch):
+    # SO_EXCLUSIVEADDRUSE only exists on Windows: fake it on the way to a real socket.
+    calls = []
+
+    class Sock:
+        def __init__(self, real):
+            self.real = real
+
+        def setsockopt(self, level, opt, value):
+            calls.append((level, opt, value))
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+    class Mod:
+        SO_EXCLUSIVEADDRUSE = -1
+        socket = staticmethod(lambda *a: Sock(socket.socket(*a)))
+
+        def __getattr__(self, name):
+            return getattr(socket, name)
+
+    (sock,) = proxy_mod._listen_sockets("127.0.0.1", 0, Mod())
+    try:
+        assert calls == [(socket.SOL_SOCKET, -1, 1)]
+        assert sock.real.getsockname()[1] > 0 and sock.real.getblocking() is False
+    finally:
+        sock.close()
+
+
+@pytest.mark.skipif(not socket.has_ipv6, reason="needs IPv6")
+def test_listen_sockets_cover_every_address_on_one_port(monkeypatch):
+    # "" means every interface (IPv4 and IPv6 wildcards), like aiohttp's TCPSite.
+    if not hasattr(socket, "SO_EXCLUSIVEADDRUSE"):  # Windows only: stand in elsewhere
+        monkeypatch.setattr(socket, "SO_EXCLUSIVEADDRUSE", socket.SO_REUSEADDR, raising=False)
+    socks = proxy_mod._listen_sockets("", 0)
+    try:
+        names = {(s.family, s.getsockname()[0]) for s in socks}
+        assert (socket.AF_INET, "0.0.0.0") in names
+        assert len({s.getsockname()[1] for s in socks}) == 1
+    finally:
+        for s in socks:
+            s.close()
+
+
+def test_win32_serves_from_a_site_socket(tmp_path, monkeypatch):
+    seen = []
+
+    def listen(host, port):
+        sock = socket.socket()
+        sock.bind((host, port))
+        sock.listen()
+        sock.setblocking(False)
+        seen.append((host, port))
+        return [sock]
+
+    monkeypatch.setattr(proxy_mod.sys, "platform", "win32")
+    monkeypatch.setattr(proxy_mod, "_listen_sockets", listen)
+    dead = f"http://127.0.0.1:{free_port()}"
+    cfg = Config(port=0, db_path=tmp_path / "e.db", upstreams={p: dead for p in Provider})
+    with embedded(cfg) as base:
+        assert int(base.rsplit(":", 1)[1]) > 0
+    assert seen == [("127.0.0.1", 0)]
+
+
+@pytest.mark.parametrize(("platform", "expected"), [("win32", False), ("linux", True)])
+def test_reuse_address_off_on_windows(monkeypatch, platform, expected):
+    monkeypatch.setattr(proxy_mod.sys, "platform", platform)
+    assert proxy_mod.reuse_address() is expected
 
 
 async def test_responses_failed_event_marks_row(h):
