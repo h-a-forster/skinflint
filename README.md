@@ -12,17 +12,36 @@ as sent, apart from two optional additions that make metering work
 ([details](docs/how-it-works.md#forwarding)). Each one is checked against your budgets first
 and recorded after.
 
+## Findings
+
+From [measurements](docs/results.md) of Claude Code 2.1.296 and earlier, taken through skinflint.
+
+- **A one-word answer carries a large fixed prompt.** `Reply with exactly: hi` sends 21,328
+  prompt tokens with tool search on, 12,275 of them built-in tool definitions, and Claude Code called no tools
+  ([section 6](docs/results.md#6-fixed-context-overhead-by-version)).
+- **A custom `ANTHROPIC_BASE_URL` silently changes the prompt.** Claude Code turns tool search
+  off and sends 35,995 tokens instead of 21,593 (+67%) unless `ENABLE_TOOL_SEARCH=true` is set
+  ([section 6](docs/results.md#6-fixed-context-overhead-by-version)).
+- **Estimate-mode caps can overshoot; worst-case mode cannot.** With `reserve = "estimate"`,
+  spend ended between $0.8906 and $1.0896 on a $1 cap (up to 9.0% over) under parallel agents.
+  `reserve = "worst_case"` never went over, but reserved $1.57 per Sonnet 5.5 request and
+  $3.13 per Opus 5.5 request, so it needs caps of several dollars
+  ([section 7](docs/results.md#7-caps-under-parallel-load)).
+- **Tool changes are the expensive cache breaks.** Adding one MCP server re-wrote 37,880 tokens
+  and made turn 2 cost 19 times the control; editing `CLAUDE.md` or the system prompt broke
+  nothing ([section 8](docs/results.md#8-cache-breakers)).
+- **The ledger agrees with Claude Code.** Across 111 runs the totals were identical,
+  $10.107486 each ([section 9](docs/results.md#9-ledger-against-claude-codes-reported-cost)).
+
 ## Why
 
 - **Agents spend unattended.** Provider limits are monthly, per organisation or workspace
   (Anthropic) or per project (OpenAI). `claude -p --max-budget-usd` caps one run and proxies
   like LiteLLM cap per key, but each needs setup per run or key. skinflint caps every Claude
   Code and Codex session by the session ids they already send. No keys; it runs locally.
-- **Most of the prompt is not your prompt.** Claude Code 2.1.296 sends about 21k tokens to
-  answer `Reply with exactly: hi`; 58% are tool definitions, none of them called. Behind a
-  custom `ANTHROPIC_BASE_URL` (tested through skinflint only) it turns tool search off and
-  sends 36k, unless `ENABLE_TOOL_SEARCH` is set. `skinflint run` sets it for you. See
-  [results](docs/results.md).
+- **Most of the prompt is not your prompt.** A coding agent sends its tool definitions,
+  system prompt and instruction files on every request, whether or not they are used.
+  See [findings](#findings).
 - **Cache misses are silent.** One changed tool schema or a timestamp in the system prompt
   re-bills the whole prefix at the cache-write rate. The response only shows a bigger number.
 
@@ -172,6 +191,28 @@ All data commands take `--json`.
 | OpenAI | Chat Completions and Responses, streaming and not, cached input, cache writes, reasoning tokens, service tiers |
 | Clients | Claude Code (API key or subscription), Codex CLI, official SDKs, anything with a configurable base URL |
 | Platforms | Linux, macOS, Windows; Python 3.11+ |
+
+## Open questions
+
+The measurements are small (one machine, one task, Claude Code only) and leave these open.
+
+- **How does fixed overhead scale with MCP servers and skills?** Four servers cost 846 tokens
+  with tool search on and 7,591 with it off; other counts and skill lists were not measured.
+  Start from `scripts/measure/overhead.py` and `skinflint profile`.
+- **What breaks the cache in real sessions?** Section 8 forces one change at a time in
+  scripted runs. A system-prompt break inside one session was not reproducible. Start from
+  `scripts/measure/cachebreak.py` and `skinflint cache --session ID` on your own sessions.
+- **Can the worst-case bound be tighter?** It reserves 128,000 output tokens when a request
+  sets no `max_tokens`, while turns produced a few hundred. Start from
+  [reservations](docs/configuration.md#reservations) and `scripts/measure/capstress.py`.
+- **How large is estimate-mode overshoot at higher parallelism or other tasks?** Seven rounds,
+  4-8 agents, one task. Start from `scripts/measure/capstress.py` and
+  [section 7](docs/results.md#7-caps-under-parallel-load).
+- **Why does the proxied default differ from `ENABLE_TOOL_SEARCH=false` sent direct?** By
+  163-524 tokens; the cause is not established. Start from `scripts/measure/direct.py` and
+  `skinflint diff A B`.
+- **Does the overhead pattern hold for Codex and other agents?** Only Claude Code was
+  measured. Start from [docs/clients.md](docs/clients.md) and `scripts/measure/common.py`.
 
 ## Limits
 
