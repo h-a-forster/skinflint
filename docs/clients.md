@@ -17,8 +17,16 @@ skinflint run --cap 5 -- claude
 
 ```sh
 export ANTHROPIC_BASE_URL=http://127.0.0.1:4100
+export ENABLE_TOOL_SEARCH=true
 claude
 ```
+
+`ENABLE_TOOL_SEARCH=true` matters. When `ANTHROPIC_BASE_URL` points anywhere but the
+Anthropic API, Claude Code turns tool search off and sends every tool definition in full on
+every request. Claude Code 2.1.296 on Haiku 4.5 then sent 35,995 prompt tokens instead of
+21,328 for a one-word answer, and 43,586 instead of 22,174 with four MCP servers. With the
+variable set, the prompt is within 2% of what Claude Code sends to the API directly. Measured on
+2.1.250, 2.1.287 and 2.1.296; see [results](results.md#6-fixed-context-overhead-by-version).
 
 Works with an API key and with a Claude subscription login. Each Claude Code conversation
 becomes a skinflint session automatically (`x-claude-code-session-id`), so `per = "session"`

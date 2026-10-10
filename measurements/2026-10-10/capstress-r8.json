@@ -1,0 +1,488 @@
+{
+ "summary": {
+  "round": "r8",
+  "agents": 4,
+  "killed": 0,
+  "model": "claude-opus-5-5",
+  "version": "2.1.296",
+  "cap_usd": 1.0,
+  "reserve": "worst_case",
+  "ledger_total_usd": 0.0,
+  "reported_total_usd": 0.0,
+  "blocked_rows": 4,
+  "estimated_rows": 0,
+  "unmatched_rows": []
+ },
+ "agents": {
+  "0": {
+   "agent": 0,
+   "killed": false,
+   "killed_at_s": null,
+   "returncode": 1,
+   "wall_s": 0.91,
+   "msg_ids": [],
+   "result": {
+    "duration_api_ms": 0,
+    "stop_reason": "stop_sequence",
+    "session_id": "8ac6c8e7-ede5-42b5-8d0e-432662c43705",
+    "total_cost_usd": 0,
+    "usage": {
+     "output_tokens_details": {
+      "thinking_tokens": 0
+     },
+     "input_tokens": 0,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 0,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "",
+     "iterations": [],
+     "speed": "standard",
+     "fallback_credit": null
+    },
+    "modelUsage": {},
+    "permission_denials": [],
+    "terminal_reason": "api_error",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+     "spawned": 0,
+     "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+     },
+     "started_in_background": 0,
+     "max_depth": 0,
+     "spawned_by_subagents": 0,
+     "completed": 0,
+     "failed": 0,
+     "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+     },
+     "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+     },
+     "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": true,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": 402,
+    "result": "API Error: 402 skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+    "type": "result",
+    "duration_ms": 273,
+    "uuid": "343ef2b7-ee7a-43c5-bae6-8d9d18facf9a",
+    "queued_turn_count": 0,
+    "result_index": 0
+   },
+   "stderr": "",
+   "n_events": 4,
+   "ledger_usd": 0,
+   "ledger_rows": []
+  },
+  "2": {
+   "agent": 2,
+   "killed": false,
+   "killed_at_s": null,
+   "returncode": 1,
+   "wall_s": 0.98,
+   "msg_ids": [],
+   "result": {
+    "duration_api_ms": 0,
+    "stop_reason": "stop_sequence",
+    "session_id": "771ddf0d-76d5-47ff-9d5f-6add76132406",
+    "total_cost_usd": 0,
+    "usage": {
+     "output_tokens_details": {
+      "thinking_tokens": 0
+     },
+     "input_tokens": 0,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 0,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "",
+     "iterations": [],
+     "speed": "standard",
+     "fallback_credit": null
+    },
+    "modelUsage": {},
+    "permission_denials": [],
+    "terminal_reason": "api_error",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+     "spawned": 0,
+     "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+     },
+     "started_in_background": 0,
+     "max_depth": 0,
+     "spawned_by_subagents": 0,
+     "completed": 0,
+     "failed": 0,
+     "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+     },
+     "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+     },
+     "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": true,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": 402,
+    "result": "API Error: 402 skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+    "type": "result",
+    "duration_ms": 306,
+    "uuid": "aad9b443-61b3-4b7b-abd4-7e50c37429fb",
+    "queued_turn_count": 0,
+    "result_index": 0
+   },
+   "stderr": "",
+   "n_events": 4,
+   "ledger_usd": 0,
+   "ledger_rows": []
+  },
+  "3": {
+   "agent": 3,
+   "killed": false,
+   "killed_at_s": null,
+   "returncode": 1,
+   "wall_s": 1.04,
+   "msg_ids": [],
+   "result": {
+    "duration_api_ms": 0,
+    "stop_reason": "stop_sequence",
+    "session_id": "5ccc38ed-8015-463c-9a94-51e33039cd28",
+    "total_cost_usd": 0,
+    "usage": {
+     "output_tokens_details": {
+      "thinking_tokens": 0
+     },
+     "input_tokens": 0,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 0,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "",
+     "iterations": [],
+     "speed": "standard",
+     "fallback_credit": null
+    },
+    "modelUsage": {},
+    "permission_denials": [],
+    "terminal_reason": "api_error",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+     "spawned": 0,
+     "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+     },
+     "started_in_background": 0,
+     "max_depth": 0,
+     "spawned_by_subagents": 0,
+     "completed": 0,
+     "failed": 0,
+     "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+     },
+     "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+     },
+     "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": true,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": 402,
+    "result": "API Error: 402 skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+    "type": "result",
+    "duration_ms": 249,
+    "uuid": "989c2ffb-7260-4c90-b063-2a39cc2dde97",
+    "queued_turn_count": 0,
+    "result_index": 0
+   },
+   "stderr": "",
+   "n_events": 4,
+   "ledger_usd": 0,
+   "ledger_rows": []
+  },
+  "1": {
+   "agent": 1,
+   "killed": false,
+   "killed_at_s": null,
+   "returncode": 1,
+   "wall_s": 1.13,
+   "msg_ids": [],
+   "result": {
+    "duration_api_ms": 0,
+    "stop_reason": "stop_sequence",
+    "session_id": "095147c1-dd7a-4e5a-8dc0-b74fd4394116",
+    "total_cost_usd": 0,
+    "usage": {
+     "output_tokens_details": {
+      "thinking_tokens": 0
+     },
+     "input_tokens": 0,
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 0,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "",
+     "iterations": [],
+     "speed": "standard",
+     "fallback_credit": null
+    },
+    "modelUsage": {},
+    "permission_denials": [],
+    "terminal_reason": "api_error",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+     "spawned": 0,
+     "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+     },
+     "started_in_background": 0,
+     "max_depth": 0,
+     "spawned_by_subagents": 0,
+     "completed": 0,
+     "failed": 0,
+     "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+     },
+     "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+     },
+     "by_type": {}
+    },
+    "safety_stops": 0,
+    "is_error": true,
+    "num_turns": 1,
+    "subtype": "success",
+    "api_error_status": 402,
+    "result": "API Error: 402 skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+    "type": "result",
+    "duration_ms": 356,
+    "uuid": "e2a76715-dd02-4737-9f0a-f0ebc6c22f03",
+    "queued_turn_count": 0,
+    "result_index": 0
+   },
+   "stderr": "",
+   "n_events": 4,
+   "ledger_usd": 0,
+   "ledger_rows": []
+  }
+ },
+ "ledger": [
+  {
+   "id": 1,
+   "ts": 1791591794.195266,
+   "provider": "anthropic",
+   "endpoint": "messages",
+   "scope": "default",
+   "model": "claude-opus-5-5",
+   "state": "blocked",
+   "session": "r8",
+   "agent": "fp:bd132fe9",
+   "client": "claude-cli/2.1.296",
+   "stream": 1,
+   "status": null,
+   "cost_usd": 0.0,
+   "cost_estimated": 0,
+   "reserved_usd": 0.0,
+   "reserved_tokens": 0,
+   "duration_ms": null,
+   "ttft_ms": null,
+   "upstream_id": null,
+   "blocked_by": "session-cap",
+   "error": "skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+   "plan": 1,
+   "request_class": null,
+   "cache_miss_reason": null,
+   "cache_missed_tokens": null,
+   "input_tokens": 0,
+   "cache_write_5m": 0,
+   "cache_write_1h": 0,
+   "cache_read": 0,
+   "output_tokens": 0,
+   "reasoning_tokens": 0,
+   "web_search_requests": 0,
+   "speed": null,
+   "service_tier": null,
+   "inference_geo": null
+  },
+  {
+   "id": 2,
+   "ts": 1791591794.2349133,
+   "provider": "anthropic",
+   "endpoint": "messages",
+   "scope": "default",
+   "model": "claude-opus-5-5",
+   "state": "blocked",
+   "session": "r8",
+   "agent": "fp:92e8e8c0",
+   "client": "claude-cli/2.1.296",
+   "stream": 1,
+   "status": null,
+   "cost_usd": 0.0,
+   "cost_estimated": 0,
+   "reserved_usd": 0.0,
+   "reserved_tokens": 0,
+   "duration_ms": null,
+   "ttft_ms": null,
+   "upstream_id": null,
+   "blocked_by": "session-cap",
+   "error": "skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+   "plan": 1,
+   "request_class": null,
+   "cache_miss_reason": null,
+   "cache_missed_tokens": null,
+   "input_tokens": 0,
+   "cache_write_5m": 0,
+   "cache_write_1h": 0,
+   "cache_read": 0,
+   "output_tokens": 0,
+   "reasoning_tokens": 0,
+   "web_search_requests": 0,
+   "speed": null,
+   "service_tier": null,
+   "inference_geo": null
+  },
+  {
+   "id": 3,
+   "ts": 1791591794.3015049,
+   "provider": "anthropic",
+   "endpoint": "messages",
+   "scope": "default",
+   "model": "claude-opus-5-5",
+   "state": "blocked",
+   "session": "r8",
+   "agent": "fp:1b0f4405",
+   "client": "claude-cli/2.1.296",
+   "stream": 1,
+   "status": null,
+   "cost_usd": 0.0,
+   "cost_estimated": 0,
+   "reserved_usd": 0.0,
+   "reserved_tokens": 0,
+   "duration_ms": null,
+   "ttft_ms": null,
+   "upstream_id": null,
+   "blocked_by": "session-cap",
+   "error": "skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+   "plan": 1,
+   "request_class": null,
+   "cache_miss_reason": null,
+   "cache_missed_tokens": null,
+   "input_tokens": 0,
+   "cache_write_5m": 0,
+   "cache_write_1h": 0,
+   "cache_read": 0,
+   "output_tokens": 0,
+   "reasoning_tokens": 0,
+   "web_search_requests": 0,
+   "speed": null,
+   "service_tier": null,
+   "inference_geo": null
+  },
+  {
+   "id": 4,
+   "ts": 1791591794.3456028,
+   "provider": "anthropic",
+   "endpoint": "messages",
+   "scope": "default",
+   "model": "claude-opus-5-5",
+   "state": "blocked",
+   "session": "r8",
+   "agent": "fp:daf0e9f9",
+   "client": "claude-cli/2.1.296",
+   "stream": 1,
+   "status": null,
+   "cost_usd": 0.0,
+   "cost_estimated": 0,
+   "reserved_usd": 0.0,
+   "reserved_tokens": 0,
+   "duration_ms": null,
+   "ttft_ms": null,
+   "upstream_id": null,
+   "blocked_by": "session-cap",
+   "error": "skinflint: budget 'session-cap' reached: $0 of $1.00 used this session (r8); this request needs up to $3.13. Edit or remove it in /tmp/claude-0/-home-user-skinflint/a838098a-7b2e-5c9b-abdf-c08e727cf26c/scratchpad/capstress/r8/sf/config.toml.",
+   "plan": 1,
+   "request_class": null,
+   "cache_miss_reason": null,
+   "cache_missed_tokens": null,
+   "input_tokens": 0,
+   "cache_write_5m": 0,
+   "cache_write_1h": 0,
+   "cache_read": 0,
+   "output_tokens": 0,
+   "reasoning_tokens": 0,
+   "web_search_requests": 0,
+   "speed": null,
+   "service_tier": null,
+   "inference_geo": null
+  }
+ ]
+}

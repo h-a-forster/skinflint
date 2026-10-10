@@ -28,6 +28,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - README wording on provider limits and request forwarding.
 - Quantified how far `reserve = "estimate"` can overshoot.
+- Results from live runs on 2026-10-10: Claude Code's fixed context on three versions, caps
+  under 4-8 parallel agents with killed clients, and nine cache breakers checked against the
+  API's diagnostics. Raw data in `measurements/`, scripts in `scripts/measure/`.
+- Behind a proxy Claude Code turns tool search off, which made every request about 67% larger
+  in these runs. The client docs and README now set `ENABLE_TOOL_SEARCH=true`, and the
+  2026-10-09 token counts carry a correction.
 
 ## 0.1.0 - 2026-10-09
 
