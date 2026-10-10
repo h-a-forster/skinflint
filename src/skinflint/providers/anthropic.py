@@ -20,6 +20,7 @@ from skinflint.providers.base import (
     header,
     headers_with_prefix,
     load_json,
+    output_chars,
     web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
@@ -150,7 +151,7 @@ class AnthropicStreamTracker:
             for key in _DELTA_TEXT:
                 text = delta.get(key)
                 if isinstance(text, str):
-                    self.streamed_chars += len(text)
+                    self.streamed_chars += output_chars(text)
         elif kind == "message_start":
             msg = as_dict(obj.get("message"))
             self.model = as_str(msg.get("model")) or self.model

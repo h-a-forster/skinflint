@@ -8,6 +8,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS, client_name, detect
 from skinflint.providers.anthropic import AnthropicAdapter
+from skinflint.providers.base import estimate_unfinished, output_chars
 
 CC = Path(__file__).parent / "fixtures" / "claude_code"
 SESSION = "11111111-2222-3333-4444-555555555555"
@@ -460,3 +461,36 @@ def test_ratelimit_headers_subset_lowercased():
         "anthropic-ratelimit-unified-5h-utilization": "0.42",
         "anthropic-ratelimit-unified-status": "allowed",
     }
+
+
+# --- cut-off stream estimate ------------------------------------------------------------
+
+
+def test_output_chars_ascii_unchanged():
+    assert output_chars("") == 0
+    assert output_chars("hello, world") == 12
+
+
+@pytest.mark.parametrize("text", ["你好世界" * 10, "🙂🙂🙂", "naïve café ✓"])
+def test_output_chars_weights_non_ascii_bytes(text):
+    ascii_chars = sum(c.isascii() for c in text)
+    non_ascii_bytes = len(text.encode()) - ascii_chars
+    assert output_chars(text) == ascii_chars + 3 * non_ascii_bytes
+    assert output_chars(text) >= 3 * len(text.encode()) - 2 * ascii_chars
+
+
+def test_cjk_stream_estimates_one_token_per_byte():
+    text = "你好世界" * 25  # 100 chars, 300 bytes
+    event = {"type": "content_block_delta", "delta": {"type": "text_delta", "text": text}}
+    tracker, _ = run(sse(("content_block_delta", event)))
+    assert tracker.streamed_chars == 3 * len(text.encode())
+    assert estimate_unfinished(Usage(), tracker.streamed_chars, 0).output_tokens == 300
+
+
+def test_unfinished_input_fallback_uses_the_bound():
+    body = {"model": "m", "messages": [{"role": "user", "content": "x" * 4000}]}
+    info = adapter.parse_request(Endpoint.MESSAGES, body)
+    bound = max(info.max_prompt_tokens, info.est_prompt_tokens)
+    assert info.max_prompt_tokens > info.est_prompt_tokens
+    assert estimate_unfinished(Usage(), 0, bound).input_tokens == bound
+    assert estimate_unfinished(Usage(input_tokens=5), 0, bound) is None

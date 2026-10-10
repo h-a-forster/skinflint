@@ -18,10 +18,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Streams cut off before their final usage (a client pressing Esc, a dropped connection)
   booked almost no output: Anthropic sends `output_tokens` only in the last `message_delta`,
   OpenAI sends no usage until the end. They are now settled with output estimated from the
-  streamed content (3 chars per token) and, for OpenAI, input from the request estimate. The
-  ledger marks the cost as estimated.
-- On Windows the listener no longer sets `SO_REUSEADDR`, which let a second process bind
-  port 4100 at the same time.
+  streamed content (ASCII at 3 chars per token, other text at one token per UTF-8 byte) and,
+  when the stream reported no input, input from the conservative prompt bound. Hidden thinking
+  is not counted. The ledger marks the cost as estimated.
+- On Windows the listener no longer sets `SO_REUSEADDR` and binds with `SO_EXCLUSIVEADDRUSE`,
+  so a second process cannot bind port 4100 at the same time, even with `SO_REUSEADDR`.
 
 ### Docs
 

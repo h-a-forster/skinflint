@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import socket
 import sys
 import threading
 import time
@@ -282,6 +283,7 @@ class Proxy:
         conversation = (session, agent_id or thread or agent) if session else None
         call.conversation = conversation
         call.est_prompt_tokens = info.est_prompt_tokens
+        call.max_prompt_tokens = info.max_prompt_tokens
         try:
             return await self.forward(
                 call, adapter, endpoint, target, raw, data, info, conversation
@@ -420,7 +422,8 @@ class Call:
         self.ttft: float | None = None
         self.settled = False
         self.conversation: tuple[str, str] | None = None
-        self.est_prompt_tokens = 0  # pre-flight estimate, for streams cut off before usage
+        self.est_prompt_tokens = 0  # pre-flight estimate
+        self.max_prompt_tokens = 0  # conservative bound, for streams cut off before usage
 
     def relay_bytes(self, upstream: aiohttp.ClientResponse, data: bytes) -> web.Response:
         """A non-2xx upstream answer, passed through unchanged."""
@@ -509,7 +512,9 @@ class Call:
             # Cut off before the final usage (Anthropic sends output_tokens last; OpenAI sends
             # nothing until the end): bill what had streamed, marked as an estimate.
             chars = getattr(tracker, "streamed_chars", 0)
-            estimated = estimate_unfinished(usage, chars, self.est_prompt_tokens)
+            estimated = estimate_unfinished(
+                usage, chars, max(self.max_prompt_tokens, self.est_prompt_tokens)
+            )
             if estimated is not None:
                 usage = estimated
                 note = f"usage estimated from {chars:,} streamed chars"
@@ -774,8 +779,26 @@ def build(cfg: Config) -> tuple[Proxy, Store]:
 def reuse_address() -> bool:
     """SO_REUSEADDR for the listener. On POSIX it only lets a restart bind over connections
     in TIME_WAIT; on Windows it would let a second process bind the same port while this one
-    listens, so it stays off there."""
+    listens, so it stays off there (and `_listen_socket` binds exclusively instead)."""
     return sys.platform != "win32"
+
+
+def _listen_socket(host: str, port: int, sock_mod: Any = socket) -> socket.socket:
+    """A non-blocking listening socket that no other process can share the port with
+    (SO_EXCLUSIVEADDRUSE, Windows only)."""
+    family, kind, proto, _, addr = sock_mod.getaddrinfo(
+        host, port, type=sock_mod.SOCK_STREAM, flags=sock_mod.AI_PASSIVE
+    )[0]
+    sock = sock_mod.socket(family, kind, proto)
+    try:
+        sock.setsockopt(sock_mod.SOL_SOCKET, sock_mod.SO_EXCLUSIVEADDRUSE, 1)
+        sock.bind(addr)
+        sock.listen()
+        sock.setblocking(False)
+    except BaseException:
+        sock.close()
+        raise
+    return sock
 
 
 async def _serve(
@@ -786,7 +809,11 @@ async def _serve(
         runner = web.AppRunner(proxy.app(), access_log=None, handle_signals=False)
         await runner.setup()
         try:
-            site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=reuse_address())
+            site: web.BaseSite
+            if sys.platform == "win32":
+                site = web.SockSite(runner, _listen_socket(cfg.host, cfg.port))
+            else:
+                site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=reuse_address())
             await site.start()
             port = runner.addresses[0][1] if runner.addresses else cfg.port
             stop = asyncio.Event()

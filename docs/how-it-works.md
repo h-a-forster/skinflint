@@ -60,11 +60,12 @@ When the response finishes, the row is updated with the real usage and cost and 
 reservation is cleared. If the client disconnects mid-stream, skinflint closes the upstream
 connection and marks the row `aborted`. The final usage never arrives (Anthropic reports
 output tokens only in the last `message_delta`; OpenAI reports no usage until the end), so
-the row is settled with output estimated from the content streamed so far (3 characters per
-token) and, when the stream reported no input, the request's prompt estimate. The cost is
-marked estimated (`~`). Output the client never saw is not counted: thinking that is not
-streamed as text (omitted or redacted thinking), OpenAI reasoning tokens, and anything the provider
-generated after the connection closed. The same applies when the upstream stream breaks.
+the row is settled with output estimated from the content streamed so far (ASCII at 3
+characters per token, other text at one token per UTF-8 byte, which errs high) and, when the
+stream reported no input, the conservative prompt bound (2.5 characters per token). The cost
+is marked estimated (`~`). Output the client never saw is not counted: thinking that is not
+streamed as text (omitted or redacted thinking), OpenAI reasoning tokens, and anything the
+provider generated after the connection closed. The same applies when the upstream stream breaks.
 
 Costs come from a built-in price table ([`prices.toml`](../src/skinflint/data/prices.toml))
 covering uncached input, 5-minute and 1-hour cache writes, cache reads, output, long-context

@@ -176,9 +176,10 @@ class Pricing:
 
         Every input token is priced at the highest input-side rate (uncached, 5m or 1h cache
         write). ``speed``, ``service_tier`` and ``inference_geo`` are the request's own
-        settings: a value the request leaves unset (or ``"auto"``) is priced at the dearest
-        option, since an account or project default can select it. ``web_searches`` is the
-        most server-side searches the request allows.
+        settings. ``service_tier`` and ``inference_geo`` left unset (or ``"auto"``) are
+        priced at the dearest option, since an account or project default can select it;
+        ``speed`` is only priced fast when the request says ``"fast"``, as no default can
+        select it. ``web_searches`` is the most server-side searches the request allows.
         """
         model_id, price, _ = self._resolve(provider, model)
         if price is None:

@@ -19,6 +19,7 @@ from skinflint.providers.base import (
     header,
     headers_with_prefix,
     load_json,
+    output_chars,
     web_search_cap,
 )
 from skinflint.sse import SSEEvent, SSEParser
@@ -159,12 +160,12 @@ class ChatStreamTracker(_Tracker):
             for key in _CHAT_DELTA_TEXT:
                 text = delta.get(key)
                 if isinstance(text, str):
-                    self.streamed_chars += len(text)
+                    self.streamed_chars += output_chars(text)
             calls = delta.get("tool_calls")
             for call in calls if isinstance(calls, list) else []:
                 args = as_dict(as_dict(call).get("function")).get("arguments")
                 if isinstance(args, str):
-                    self.streamed_chars += len(args)
+                    self.streamed_chars += output_chars(args)
 
 
 class ResponsesStreamTracker(_Tracker):
@@ -201,7 +202,7 @@ class ResponsesStreamTracker(_Tracker):
             # output_text, reasoning_text, reasoning_summary_text, function_call_arguments...
             delta = obj.get("delta")
             if isinstance(delta, str):
-                self.streamed_chars += len(delta)
+                self.streamed_chars += output_chars(delta)
             return
         if kind == "error":
             self.error = error_message(obj.get("error") if "error" in obj else obj)

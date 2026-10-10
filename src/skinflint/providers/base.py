@@ -23,9 +23,21 @@ BOUND_MEDIA_TOKENS = 5000
 OUTPUT_CHARS_PER_TOKEN = 3
 
 
+def output_chars(text: str) -> int:
+    """Weighted length of generated text, in OUTPUT_CHARS_PER_TOKEN units per token. Byte-level
+    BPE tokens are at least one byte, so non-ASCII text (CJK, emoji) cannot run above one
+    token per byte, while ASCII runs 3-4 chars per token: each ASCII char counts 1 and each
+    UTF-8 byte of anything else counts OUTPUT_CHARS_PER_TOKEN."""
+    if text.isascii():
+        return len(text)
+    n_ascii = len(text.encode("ascii", "ignore"))
+    n_bytes = len(text.encode("utf-8"))
+    return n_ascii + OUTPUT_CHARS_PER_TOKEN * (n_bytes - n_ascii)
+
+
 class StreamTracker(Protocol):
     usage: Usage  # best-known usage so far
-    streamed_chars: int  # characters of generated content (text, thinking, tool input) seen
+    streamed_chars: int  # generated content (text, thinking, tool input) seen, as output_chars
     model: str | None
     upstream_id: str | None
     finished: bool  # saw the provider's terminal event
@@ -198,7 +210,7 @@ def error_message(err: Any) -> str:
 
 def estimate_unfinished(usage: Usage, streamed_chars: int, prompt_tokens: int) -> Usage | None:
     """Usage for a stream that ended before the provider's final usage: output from the
-    content streamed so far, input from the request estimate when the stream reported none.
+    content streamed so far, input from the prompt bound when the stream reported none.
     None when the reported usage already covers both."""
     output = max(usage.output_tokens, math.ceil(streamed_chars / OUTPUT_CHARS_PER_TOKEN))
     no_input = usage.prompt_tokens == 0 and prompt_tokens > 0
