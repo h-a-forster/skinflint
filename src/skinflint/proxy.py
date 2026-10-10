@@ -779,26 +779,39 @@ def build(cfg: Config) -> tuple[Proxy, Store]:
 def reuse_address() -> bool:
     """SO_REUSEADDR for the listener. On POSIX it only lets a restart bind over connections
     in TIME_WAIT; on Windows it would let a second process bind the same port while this one
-    listens, so it stays off there (and `_listen_socket` binds exclusively instead)."""
+    listens, so it stays off there (and `_listen_sockets` binds exclusively instead)."""
     return sys.platform != "win32"
 
 
-def _listen_socket(host: str, port: int, sock_mod: Any = socket) -> socket.socket:
-    """A non-blocking listening socket that no other process can share the port with
-    (SO_EXCLUSIVEADDRUSE, Windows only)."""
-    family, kind, proto, _, addr = sock_mod.getaddrinfo(
-        host, port, type=sock_mod.SOCK_STREAM, flags=sock_mod.AI_PASSIVE
-    )[0]
-    sock = sock_mod.socket(family, kind, proto)
+def _listen_sockets(host: str, port: int, sock_mod: Any = socket) -> list[socket.socket]:
+    """Non-blocking listening sockets, one per address `host` resolves to (every interface
+    for "", as aiohttp's TCPSite binds), that no other process can share the port with
+    (SO_EXCLUSIVEADDRUSE, Windows only). Port 0 picks one free port for all of them."""
+    infos = sock_mod.getaddrinfo(
+        host or None, port, type=sock_mod.SOCK_STREAM, flags=sock_mod.AI_PASSIVE
+    )
+    socks: list[socket.socket] = []
+    seen: set[tuple[int, str]] = set()
     try:
-        sock.setsockopt(sock_mod.SOL_SOCKET, sock_mod.SO_EXCLUSIVEADDRUSE, 1)
-        sock.bind(addr)
-        sock.listen()
-        sock.setblocking(False)
+        for family, kind, proto, _, addr in infos:
+            if (family, addr[0]) in seen:
+                continue
+            seen.add((family, addr[0]))
+            sock = sock_mod.socket(family, kind, proto)
+            socks.append(sock)
+            sock.setsockopt(sock_mod.SOL_SOCKET, sock_mod.SO_EXCLUSIVEADDRUSE, 1)
+            if family == sock_mod.AF_INET6:
+                # IPv6 and IPv4 get a socket each, so the IPv6 one must not claim IPv4 too.
+                sock.setsockopt(sock_mod.IPPROTO_IPV6, sock_mod.IPV6_V6ONLY, 1)
+            sock.bind((addr[0], port, *addr[2:]))
+            sock.listen()
+            sock.setblocking(False)
+            port = port or sock.getsockname()[1]
     except BaseException:
-        sock.close()
+        for sock in socks:
+            sock.close()
         raise
-    return sock
+    return socks
 
 
 async def _serve(
@@ -809,12 +822,13 @@ async def _serve(
         runner = web.AppRunner(proxy.app(), access_log=None, handle_signals=False)
         await runner.setup()
         try:
-            site: web.BaseSite
+            sites: list[web.BaseSite]
             if sys.platform == "win32":
-                site = web.SockSite(runner, _listen_socket(cfg.host, cfg.port))
+                sites = [web.SockSite(runner, s) for s in _listen_sockets(cfg.host, cfg.port)]
             else:
-                site = web.TCPSite(runner, cfg.host, cfg.port, reuse_address=reuse_address())
-            await site.start()
+                sites = [web.TCPSite(runner, cfg.host, cfg.port, reuse_address=reuse_address())]
+            for site in sites:
+                await site.start()
             port = runner.addresses[0][1] if runner.addresses else cfg.port
             stop = asyncio.Event()
             if holder is not None:

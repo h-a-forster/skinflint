@@ -181,8 +181,10 @@ so this also holds across several skinflint processes sharing one ledger.
   50 searches from an uncapped web search tool, base64 documents (a multi-page PDF counts as
   one image), and price changes not yet in the bundled table.
 
-When a request finishes, its reservation is replaced by its real cost. Reservations left by a
-crashed process stop counting after 15 minutes.
+When a request finishes, its reservation is replaced by its real cost. Reservations stop
+counting after 15 minutes so that ones left by a crashed process do not block forever; a request
+still streaming after 15 minutes also stops counting until it finishes, so neither mode bounds
+spend from very long requests running in parallel.
 
 ### What a refusal looks like
 

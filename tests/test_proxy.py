@@ -973,12 +973,27 @@ def test_listen_socket_is_exclusive_and_serves(monkeypatch):
         def __getattr__(self, name):
             return getattr(socket, name)
 
-    sock = proxy_mod._listen_socket("127.0.0.1", 0, Mod())
+    (sock,) = proxy_mod._listen_sockets("127.0.0.1", 0, Mod())
     try:
         assert calls == [(socket.SOL_SOCKET, -1, 1)]
         assert sock.real.getsockname()[1] > 0 and sock.real.getblocking() is False
     finally:
         sock.close()
+
+
+@pytest.mark.skipif(not socket.has_ipv6, reason="needs IPv6")
+def test_listen_sockets_cover_every_address_on_one_port(monkeypatch):
+    # "" means every interface (IPv4 and IPv6 wildcards), like aiohttp's TCPSite.
+    if not hasattr(socket, "SO_EXCLUSIVEADDRUSE"):  # Windows only: stand in elsewhere
+        monkeypatch.setattr(socket, "SO_EXCLUSIVEADDRUSE", socket.SO_REUSEADDR, raising=False)
+    socks = proxy_mod._listen_sockets("", 0)
+    try:
+        names = {(s.family, s.getsockname()[0]) for s in socks}
+        assert (socket.AF_INET, "0.0.0.0") in names
+        assert len({s.getsockname()[1] for s in socks}) == 1
+    finally:
+        for s in socks:
+            s.close()
 
 
 def test_win32_serves_from_a_site_socket(tmp_path, monkeypatch):
@@ -990,10 +1005,10 @@ def test_win32_serves_from_a_site_socket(tmp_path, monkeypatch):
         sock.listen()
         sock.setblocking(False)
         seen.append((host, port))
-        return sock
+        return [sock]
 
     monkeypatch.setattr(proxy_mod.sys, "platform", "win32")
-    monkeypatch.setattr(proxy_mod, "_listen_socket", listen)
+    monkeypatch.setattr(proxy_mod, "_listen_sockets", listen)
     dead = f"http://127.0.0.1:{free_port()}"
     cfg = Config(port=0, db_path=tmp_path / "e.db", upstreams={p: dead for p in Provider})
     with embedded(cfg) as base:
