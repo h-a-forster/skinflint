@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use skinflint, please cite it as below."
+title: skinflint
+abstract: >-
+  Local proxy for the Anthropic and OpenAI APIs: hard spend caps for coding agents, a
+  context token profiler, and a prompt-cache doctor.
+type: software
+authors:
+  - alias: h-a-forster
+repository-code: "https://github.com/h-a-forster/skinflint"
+license: MIT
+version: 0.1.0
+date-released: 2026-10-09
