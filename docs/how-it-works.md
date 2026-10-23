@@ -56,7 +56,9 @@ reservations of requests still in flight, and either:
 Because the check and the reservation happen in one transaction, parallel requests, and
 separate skinflint processes sharing a ledger, cannot all pass the same remaining budget.
 
-When the response finishes, the row is updated with the real usage and cost and the
+While the request is in flight, the proxy refreshes the row every minute, which keeps the
+reservation counting; one left by a crashed process stops counting 15 minutes after its last
+refresh. When the response finishes, the row is updated with the real usage and cost and the
 reservation is cleared. If the client disconnects mid-stream, skinflint closes the upstream
 connection and marks the row `aborted`. The final usage never arrives (Anthropic reports
 output tokens only in the last `message_delta`; OpenAI reports no usage until the end), so

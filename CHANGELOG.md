@@ -14,6 +14,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A request in flight for more than 15 minutes stopped counting its reservation against
+  budgets until it finished, so long parallel requests could overrun a limit, and a second
+  proxy starting on the same ledger marked such requests `lost`. The proxy now refreshes the
+  ledger row of every in-flight request each minute (`duration_ms` holds the elapsed time);
+  a reservation expires 15 minutes after its last refresh, which still frees reservations
+  left by a crashed process. No schema change.
 - The input of a stream cut off before the provider reported usage was priced as the
   conservative prompt bound, all uncached, overcharging heavily cached agent turns roughly
   10-15x on input. When an earlier request in the same conversation reported usage within

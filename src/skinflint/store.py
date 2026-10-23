@@ -78,6 +78,9 @@ SEGMENT_FIELDS = (
 )
 SETTLED = (State.OK.value, State.ERROR.value, State.ABORTED.value)
 TOTAL_TOKENS_SQL = "(input_tokens + cache_write_5m + cache_write_1h + cache_read + output_tokens)"
+# When a row was last known to be in flight. A PENDING row's duration_ms is the elapsed time at
+# its latest heartbeat (NULL before the first), so long requests stay live while they run.
+LAST_SEEN_SQL = "(ts + COALESCE(duration_ms, 0) / 1000.0)"
 AGGREGATE_KEYS = {
     "scope": "scope",
     "session": "session",
@@ -255,8 +258,10 @@ class Txn:
         pending_ttl: float = 900,
     ) -> Spend:
         """Settled rows count cost and tokens; live PENDING rows count their reservation;
-        BLOCKED, LOST and stale PENDING rows count nothing."""
-        live = f"(state = 'pending' AND ts >= {float(now - pending_ttl)!r})"
+        BLOCKED, LOST and stale PENDING rows count nothing. A PENDING row is live until
+        `pending_ttl` seconds after it was last seen in flight: its arrival, or its latest
+        heartbeat (see Store.heartbeat)."""
+        live = f"(state = 'pending' AND {LAST_SEEN_SQL} >= {float(now - pending_ttl)!r})"
         settled = f"state IN {SETTLED!r}"
         where = ["scope GLOB ?", "model GLOB ?"]
         args: list[Any] = [scope_glob, model_glob]
@@ -420,11 +425,28 @@ class Store:
                 )
 
     def mark_lost(self, older_than: float) -> int:
-        """PENDING rows that arrived before `older_than` become LOST."""
+        """PENDING rows last seen in flight (arrival or latest heartbeat) before `older_than`
+        become LOST."""
         with self._lock:
             cur = self._conn.execute(
-                "UPDATE requests SET state = 'lost' WHERE state = 'pending' AND ts < ?",
+                "UPDATE requests SET state = 'lost'"
+                f" WHERE state = 'pending' AND {LAST_SEEN_SQL} < ?",
                 (older_than,),
+            )
+            return cur.rowcount
+
+    def heartbeat(self, record_ids: Iterable[int], now: float) -> int:
+        """Record that these PENDING rows are still in flight: duration_ms becomes the time
+        since arrival, which keeps their reservation counting (Txn.spend) and keeps
+        mark_lost off them. Rows already settled are left alone."""
+        rows = [(now, i) for i in record_ids]
+        if not rows:
+            return 0
+        with self.immediate():
+            cur = self._conn.executemany(
+                "UPDATE requests SET duration_ms = CAST((? - ts) * 1000 AS INTEGER)"
+                " WHERE id = ? AND state = 'pending'",
+                rows,
             )
             return cur.rowcount
 

@@ -663,6 +663,24 @@ async def test_aborted_stream_prompt_follows_the_conversations_cache(make):
     assert fresh.cost_usd > 3 * cached.cost_usd
 
 
+async def test_heartbeat_keeps_long_streams_reserved(make, monkeypatch):
+    monkeypatch.setattr(proxy_mod, "HEARTBEAT_INTERVAL", 0.05)
+    h = await make()
+    h.fake.reply(stream(anthropic_events(deltas=40), delay=0.02))
+    resp = await h.messages()
+    await resp.content.readany()
+    (rid,) = h.proxy.in_flight
+
+    def beaten() -> bool:
+        row = h.store.get(rid)
+        return row.state is State.PENDING and (row.duration_ms or 0) > 0
+
+    await wait_for(beaten)
+    await resp.read()
+    (rec,) = await h.records()
+    assert rec.state is State.OK and not h.proxy.in_flight
+
+
 async def test_finished_stream_keeps_reported_usage(h):
     h.fake.reply(stream(anthropic_events(text="x" * 600, deltas=50)))
     resp = await h.messages()

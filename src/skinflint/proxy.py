@@ -26,7 +26,7 @@ from multidict import CIMultiDict
 from yarl import URL
 
 from skinflint import __version__, segments
-from skinflint.budget import Budget
+from skinflint.budget import DEFAULT_PENDING_TTL, Budget
 from skinflint.config import Config
 from skinflint.model import Decision, Endpoint, Provider, Record, RequestInfo, Segment, State, Usage
 from skinflint.pricing import Pricing
@@ -41,7 +41,10 @@ T = TypeVar("T")
 FIRST_PARTY = {Provider.ANTHROPIC: "https://api.anthropic.com"}
 SCOPE_RE = re.compile(r"^[A-Za-z0-9._:@+-]{1,64}$")
 HEALTH_PATH = "/_skinflint/health"
-PENDING_TTL = 900.0
+PENDING_TTL = DEFAULT_PENDING_TTL
+# How often the proxy marks its in-flight requests as alive in the ledger, so a request
+# running longer than PENDING_TTL keeps its reservation; well under PENDING_TTL.
+HEARTBEAT_INTERVAL = 60.0
 # Longest silence tolerated from the upstream mid-response. Providers send keep-alive pings
 # during long generations, so this only trips on a hung connection.
 UPSTREAM_IDLE_TIMEOUT = 600.0
@@ -83,6 +86,8 @@ class Proxy:
         # Request segmentation runs alongside the upstream call, off the critical path.
         self.cpu = ThreadPoolExecutor(max_workers=2, thread_name_prefix="skinflint-profile")
         self.http: aiohttp.ClientSession | None = None
+        self.in_flight: set[int] = set()  # ledger ids of unsettled calls, for heartbeats
+        self.beat: asyncio.Task[None] | None = None
         self.diagnostics = cfg.cache_diagnostics
         self.last_message: OrderedDict[tuple[str, str | None], str] = OrderedDict()
         # Per conversation: (arrival ts, reported usage, pre-flight prompt estimate) of the
@@ -102,10 +107,15 @@ class Proxy:
             auto_decompress=True,
             trust_env=True,
         )
+        self.beat = asyncio.create_task(self.heartbeat())
 
     async def stop(self, app: web.Application) -> None:
         """Runs after every handler has finished: close upstream connections, then drain the
         ledger queue so the owner can close the store."""
+        if self.beat is not None:
+            self.beat.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.beat
         if self.http is not None:
             await self.http.close()
         await asyncio.to_thread(self.cpu.shutdown, True)
@@ -130,6 +140,15 @@ class Proxy:
             future: Future = Future()
             future.set_result(None)
             return future
+
+    async def heartbeat(self) -> None:
+        """Every HEARTBEAT_INTERVAL, mark the ledger rows of requests still in flight as
+        alive. A reservation then expires PENDING_TTL after its process stops beating (a
+        crash), not PENDING_TTL after the request arrived."""
+        while True:
+            await asyncio.sleep(HEARTBEAT_INTERVAL)
+            if self.in_flight:
+                self.submit(self.store.heartbeat, sorted(self.in_flight), time.time())
 
     def submit(self, fn: Callable[..., Any], *args: Any) -> None:
         """Queue a ledger write without waiting for it; failures are logged, never raised."""
@@ -441,6 +460,7 @@ class Call:
         self.cache_key: tuple[str, str | None] | None = None  # see Proxy.last_prompt
         self.est_prompt_tokens = 0  # pre-flight estimate
         self.max_prompt_tokens = 0  # conservative bound, for streams cut off before usage
+        proxy.in_flight.add(record_id)
 
     def relay_bytes(self, upstream: aiohttp.ClientResponse, data: bytes) -> web.Response:
         """A non-2xx upstream answer, passed through unchanged."""
@@ -581,6 +601,7 @@ class Call:
             return
         self.settled = True
         proxy, rec = self.proxy, self.record
+        proxy.in_flight.discard(self.record_id)
         rec.state = state
         rec.status = status
         rec.usage = usage or Usage()

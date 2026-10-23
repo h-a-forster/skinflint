@@ -181,10 +181,13 @@ so this also holds across several skinflint processes sharing one ledger.
   50 searches from an uncapped web search tool, base64 documents (a multi-page PDF counts as
   one image), and price changes not yet in the bundled table.
 
-When a request finishes, its reservation is replaced by its real cost. Reservations stop
-counting after 15 minutes so that ones left by a crashed process do not block forever; a request
-still streaming after 15 minutes also stops counting until it finishes, so neither mode bounds
-spend from very long requests running in parallel.
+When a request finishes, its reservation is replaced by its real cost. While a request is in
+flight, the proxy refreshes its ledger row every minute (the row's `duration_ms` holds the time
+elapsed so far), so a request that streams for an hour keeps its reservation for the whole
+hour. A reservation stops counting 15 minutes after its row was last refreshed, so ones left
+by a crashed process stop blocking 15 minutes after the crash, and the next proxy to start
+marks them `lost`. Processes running skinflint 0.1.0 or earlier against the same ledger do
+not refresh their rows: their reservations still stop counting 15 minutes after arrival.
 
 ### What a refusal looks like
 
