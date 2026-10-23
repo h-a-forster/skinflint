@@ -61,9 +61,17 @@ reservation is cleared. If the client disconnects mid-stream, skinflint closes t
 connection and marks the row `aborted`. The final usage never arrives (Anthropic reports
 output tokens only in the last `message_delta`; OpenAI reports no usage until the end), so
 the row is settled with output estimated from the content streamed so far (ASCII at 3
-characters per token, other text at one token per UTF-8 byte, which errs high) and, when the
-stream reported no input, the conservative prompt bound (2.5 characters per token). The cost
-is marked estimated (`~`). Output the client never saw is not counted: thinking that is not
+characters per token, other text at one token per UTF-8 byte, which errs high). When the
+stream reported no input (OpenAI streams, or an Anthropic stream cut off before
+`message_start`), the input side is estimated too. If an earlier request in the same
+conversation (session and agent, or scope and agent without a session) reported usage within
+its cache lifetime (Anthropic 5 minutes, or 1 hour when it wrote 1-hour cache; OpenAI 10
+minutes), the prompt is sized from this request's estimate scaled by that request's
+reported-to-estimated ratio, the prefix it left cached is priced as a cache read, and the new
+tail as a cache write (Anthropic, when the earlier request wrote one) or uncached input.
+Otherwise the whole conservative prompt bound (2.5 characters per token) is priced as
+uncached input, which overstates a heavily cached prompt by up to an order of magnitude.
+The cost is marked estimated (`~`). Output the client never saw is not counted: thinking that is not
 streamed as text (omitted or redacted thinking), OpenAI reasoning tokens, and anything the
 provider generated after the connection closed. The same applies when the upstream stream breaks.
 

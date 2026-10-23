@@ -31,7 +31,7 @@ from skinflint.config import Config
 from skinflint.model import Decision, Endpoint, Provider, Record, RequestInfo, Segment, State, Usage
 from skinflint.pricing import Pricing
 from skinflint.providers import ADAPTERS, Adapter, StreamTracker, client_name, detect
-from skinflint.providers.base import estimate_unfinished
+from skinflint.providers.base import cache_lifetime, estimate_prompt, estimate_unfinished
 from skinflint.store import Store
 
 log = logging.getLogger("skinflint")
@@ -85,6 +85,11 @@ class Proxy:
         self.http: aiohttp.ClientSession | None = None
         self.diagnostics = cfg.cache_diagnostics
         self.last_message: OrderedDict[tuple[str, str | None], str] = OrderedDict()
+        # Per conversation: (arrival ts, reported usage, pre-flight prompt estimate) of the
+        # last request the provider reported usage for; see Call.prompt_estimate.
+        self.last_prompt: OrderedDict[tuple[str, str | None], tuple[float, Usage, int]] = (
+            OrderedDict()
+        )
 
     # -- lifecycle -------------------------------------------------------------------------
 
@@ -282,6 +287,8 @@ class Proxy:
         # to report) but differs for side requests and subagents in the same session.
         conversation = (session, agent_id or thread or agent) if session else None
         call.conversation = conversation
+        # Requests without a session still share prompt prefixes within one agent and scope.
+        call.cache_key = conversation or ("scope:" + scope, agent)
         call.est_prompt_tokens = info.est_prompt_tokens
         call.max_prompt_tokens = info.max_prompt_tokens
         try:
@@ -374,10 +381,19 @@ class Proxy:
     def remember(self, conversation: tuple[str, str | None] | None, message_id: str | None) -> None:
         if conversation is None or not message_id:
             return
-        self.last_message[conversation] = message_id
-        self.last_message.move_to_end(conversation)
-        while len(self.last_message) > MAX_CONVERSATIONS:
-            self.last_message.popitem(last=False)
+        remember_bounded(self.last_message, conversation, message_id)
+
+    def remember_prompt(
+        self, key: tuple[str, str | None] | None, ts: float, usage: Usage, est_tokens: int
+    ) -> None:
+        """Keep the newest reported prompt usage per conversation (by arrival time, so a
+        slow request settling late does not replace a newer one)."""
+        if key is None or usage.prompt_tokens <= 0:
+            return
+        current = self.last_prompt.get(key)
+        if current is not None and current[0] > ts:
+            return
+        remember_bounded(self.last_prompt, key, (ts, usage, est_tokens))
 
     async def send(
         self, request: web.Request, provider: Provider, target: str, body: bytes
@@ -422,6 +438,7 @@ class Call:
         self.ttft: float | None = None
         self.settled = False
         self.conversation: tuple[str, str] | None = None
+        self.cache_key: tuple[str, str | None] | None = None  # see Proxy.last_prompt
         self.est_prompt_tokens = 0  # pre-flight estimate
         self.max_prompt_tokens = 0  # conservative bound, for streams cut off before usage
 
@@ -512,10 +529,12 @@ class Call:
             # Cut off before the final usage (Anthropic sends output_tokens last; OpenAI sends
             # nothing until the end): bill what had streamed, marked as an estimate.
             chars = getattr(tracker, "streamed_chars", 0)
-            estimated = estimate_unfinished(
-                usage, chars, max(self.max_prompt_tokens, self.est_prompt_tokens)
-            )
+            estimated = estimate_unfinished(usage, chars, self.prompt_estimate())
             if estimated is not None:
+                if usage.prompt_tokens:  # the input side is still the provider's report
+                    self.proxy.remember_prompt(
+                        self.cache_key, self.record.ts, usage, self.est_prompt_tokens
+                    )
                 usage = estimated
                 note = f"usage estimated from {chars:,} streamed chars"
                 error = f"{error}; {note}" if error else note
@@ -529,6 +548,20 @@ class Call:
             diag=diag,
             estimated=estimated is not None,
         )
+
+    def prompt_estimate(self) -> Usage:
+        """The prompt of a request cut off before usage: split into cache reads, writes and
+        uncached input from the previous request of the conversation while its cache is
+        still live, else the conservative bound as uncached input (see estimate_prompt)."""
+        rec = self.record
+        prior = self.proxy.last_prompt.get(self.cache_key) if self.cache_key else None
+        if prior is not None:
+            ts, usage, est = prior
+            if 0 <= rec.ts - ts <= cache_lifetime(rec.provider, usage):
+                return estimate_prompt(
+                    rec.provider, self.est_prompt_tokens, self.max_prompt_tokens, usage, est
+                )
+        return estimate_prompt(rec.provider, self.est_prompt_tokens, self.max_prompt_tokens)
 
     def settle(
         self,
@@ -570,6 +603,8 @@ class Call:
         rec.reserved_tokens = 0
         if state is State.OK:
             proxy.remember(self.conversation, upstream_id)
+        if not estimated:
+            proxy.remember_prompt(self.cache_key, rec.ts, rec.usage, self.est_prompt_tokens)
         self.segs.add_done_callback(self.write)
         log_record(rec)
 
@@ -589,6 +624,15 @@ class Call:
 
 
 # -- helpers -------------------------------------------------------------------------------
+
+
+def remember_bounded(cache: OrderedDict[Any, Any], key: Any, value: Any) -> None:
+    """Insert or refresh `key` as the newest entry, dropping the oldest past
+    MAX_CONVERSATIONS."""
+    cache[key] = value
+    cache.move_to_end(key)
+    while len(cache) > MAX_CONVERSATIONS:
+        cache.popitem(last=False)
 
 
 def prepare(

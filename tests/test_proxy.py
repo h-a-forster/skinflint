@@ -629,6 +629,40 @@ async def test_aborted_openai_stream_estimates_usage(make, endpoint):
     assert rec.cost_estimated and rec.cost_usd > 0
 
 
+async def test_aborted_stream_prompt_follows_the_conversations_cache(make):
+    # A cut-off Codex turn: the previous turn of the session left ~40k tokens cached, so the
+    # estimate reads them from cache instead of billing the whole prompt as fresh input.
+    h = await make()
+    usage = {
+        "input_tokens": 40_000,
+        "input_tokens_details": {"cached_tokens": 39_000},
+        "output_tokens": 100,
+        "total_tokens": 40_100,
+    }
+    h.fake.reply(stream(responses_events(usage=usage)))
+    headers = {"session-id": "sess-a", "content-type": "application/json"}
+    body = {"model": "gpt-5.4", "input": "hi " * 53_000, "stream": True}
+    resp = await h.post("/v1/responses", body, headers)
+    await resp.read()
+
+    async def aborted(session: str) -> Record:
+        h.fake.reply(stream(responses_events(deltas=500), delay=0.01))
+        body = {"model": "gpt-5.4", "input": "hi " * 54_000, "stream": True}
+        resp = await h.post("/v1/responses", body, {**headers, "session-id": session})
+        await read_until(resp, b"output_text.delta", 20)
+        resp.close()
+        await wait_for(lambda: h.fake.active == 0)
+        return (await h.records())[-1]
+
+    cached = await aborted("sess-a")
+    assert cached.state is State.ABORTED and cached.cost_estimated
+    assert cached.usage.cache_read == 40_000 // 128 * 128
+    assert 0 < cached.usage.input_tokens < 5_000
+    fresh = await aborted("sess-b")  # no earlier turn in this session: the bound, uncached
+    assert fresh.usage.cache_read == 0 and fresh.usage.input_tokens > 54_000
+    assert fresh.cost_usd > 3 * cached.cost_usd
+
+
 async def test_finished_stream_keeps_reported_usage(h):
     h.fake.reply(stream(anthropic_events(text="x" * 600, deltas=50)))
     resp = await h.messages()

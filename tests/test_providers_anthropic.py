@@ -8,7 +8,13 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS, client_name, detect
 from skinflint.providers.anthropic import AnthropicAdapter
-from skinflint.providers.base import BOUND_MEDIA_TOKENS, estimate_unfinished, output_chars
+from skinflint.providers.base import (
+    BOUND_MEDIA_TOKENS,
+    cache_lifetime,
+    estimate_prompt,
+    estimate_unfinished,
+    output_chars,
+)
 
 CC = Path(__file__).parent / "fixtures" / "claude_code"
 SESSION = "11111111-2222-3333-4444-555555555555"
@@ -484,7 +490,7 @@ def test_cjk_stream_estimates_one_token_per_byte():
     event = {"type": "content_block_delta", "delta": {"type": "text_delta", "text": text}}
     tracker, _ = run(sse(("content_block_delta", event)))
     assert tracker.streamed_chars == 3 * len(text.encode())
-    assert estimate_unfinished(Usage(), tracker.streamed_chars, 0).output_tokens == 300
+    assert estimate_unfinished(Usage(), tracker.streamed_chars, Usage()).output_tokens == 300
 
 
 def test_unfinished_input_fallback_uses_the_bound():
@@ -492,8 +498,57 @@ def test_unfinished_input_fallback_uses_the_bound():
     info = adapter.parse_request(Endpoint.MESSAGES, body)
     bound = max(info.max_prompt_tokens, info.est_prompt_tokens)
     assert info.max_prompt_tokens > info.est_prompt_tokens
-    assert estimate_unfinished(Usage(), 0, bound).input_tokens == bound
-    assert estimate_unfinished(Usage(input_tokens=5), 0, bound) is None
+    prompt = estimate_prompt(
+        Provider.ANTHROPIC, info.est_prompt_tokens, info.max_prompt_tokens
+    )  # no earlier request to go by: the bound, uncached
+    assert prompt == Usage(input_tokens=bound)
+    assert estimate_unfinished(Usage(), 0, prompt).input_tokens == bound
+    assert estimate_unfinished(Usage(input_tokens=5), 0, prompt) is None
+
+
+def test_unfinished_prompt_follows_the_previous_requests_cache():
+    # The previous turn read 90k from cache and wrote 5k (95,010 prompt tokens reported
+    # against a 95,010 estimate): this one reads those 95k back and writes its new tail.
+    prior = Usage(input_tokens=10, cache_read=90_000, cache_write_5m=5_000, output_tokens=400)
+    prompt = estimate_prompt(Provider.ANTHROPIC, 100_000, 160_000, prior, 95_010)
+    assert prompt == Usage(cache_read=95_000, cache_write_5m=5_000)
+    # The calibration ratio is clamped (95,010 / 24,000 -> 2.0) and the bound caps the size.
+    prompt = estimate_prompt(Provider.ANTHROPIC, 25_000, 40_000, prior, 24_000)
+    assert prompt == Usage(cache_read=40_000)
+
+
+def test_unfinished_prompt_cache_write_lifetime_and_no_writes():
+    prior_1h = Usage(cache_read=50_000, cache_write_1h=2_000)
+    p = estimate_prompt(Provider.ANTHROPIC, 60_000, 90_000, prior_1h, 52_000)
+    assert p.cache_read == 52_000 and p.cache_write_1h == p.prompt_tokens - 52_000
+    assert cache_lifetime(Provider.ANTHROPIC, prior_1h) == 3600
+    assert cache_lifetime(Provider.ANTHROPIC, Usage(cache_read=1)) == 300
+    # No cache writes on the previous turn: the new tail is plain input.
+    p = estimate_prompt(Provider.ANTHROPIC, 60_000, 90_000, Usage(cache_read=50_000), 50_000)
+    assert p.cache_read == 50_000 and p.input_tokens == p.prompt_tokens - 50_000
+    assert p.cache_write == 0
+    # No caching at all on the previous turn: everything is input, calibrated.
+    p = estimate_prompt(Provider.ANTHROPIC, 60_000, 90_000, Usage(input_tokens=55_000), 50_000)
+    assert p == Usage(input_tokens=66_000)
+
+
+def test_unfinished_prompt_is_much_cheaper_when_cached():
+    # A heavily cached agent turn: billing the bound as uncached input overcharges the
+    # input side by an order of magnitude.
+    from skinflint.pricing import Pricing
+
+    pricing = Pricing.load(None)
+    actual = Usage(input_tokens=200, cache_read=118_000, cache_write_5m=1_800)
+    prior = Usage(input_tokens=200, cache_read=116_000, cache_write_5m=2_000)
+    est, bound = 120_000, 192_000  # 480k chars at 4 and 2.5 chars per token
+    naive = estimate_prompt(Provider.ANTHROPIC, est, bound)
+    split = estimate_prompt(Provider.ANTHROPIC, est, bound, prior, 118_000)
+    model = "claude-haiku-4-5"
+    cost_actual = pricing.cost(Provider.ANTHROPIC, model, actual)[0]
+    cost_naive = pricing.cost(Provider.ANTHROPIC, model, naive)[0]
+    cost_split = pricing.cost(Provider.ANTHROPIC, model, split)[0]
+    assert cost_naive > 10 * cost_actual
+    assert 0.5 * cost_actual < cost_split < 1.5 * cost_actual
 
 
 @pytest.mark.parametrize(
