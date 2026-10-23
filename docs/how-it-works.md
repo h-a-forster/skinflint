@@ -67,12 +67,14 @@ characters per token, other text at one token per UTF-8 byte, which errs high). 
 stream reported no input (OpenAI streams, or an Anthropic stream cut off before
 `message_start`), the input side is estimated too. If an earlier request in the same
 conversation, with the same provider and model, reported usage within its cache lifetime
-(Anthropic 5 minutes, or 1 hour when it wrote 1-hour cache; OpenAI 10 minutes), the prompt
+(Anthropic 5 minutes, or 1 hour when it wrote 1-hour cache; OpenAI 5 minutes), the prompt
 is sized from this request's estimate scaled by that request's reported-to-estimated ratio,
 the prefix it left cached is priced as a cache read, and the new tail as a cache write
 (Anthropic, when the earlier request wrote one) or uncached input. A conversation is the
 session and agent; without a session, the scope, agent and first message; a request with
-neither has no earlier request.
+neither has no earlier request. This assumes the provider's cache served the prefix; when it
+missed (OpenAI's automatic cache is best-effort, and any cache can be evicted early), the real
+input cost was higher, up to about 10x on the cached part, so the estimate can undercount.
 Otherwise the whole conservative prompt bound (2.5 characters per token) is priced as
 uncached input, which overstates a heavily cached prompt by up to an order of magnitude.
 The cost is marked estimated (`~`). Output the client never saw is not counted: thinking that is not

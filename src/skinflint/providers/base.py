@@ -265,10 +265,12 @@ def error_message(err: Any) -> str:
 
 # How long a provider keeps a prompt prefix cached after the request that last used it:
 # Anthropic's default breakpoint lifetime is 5 minutes (1 hour when written with ttl "1h");
-# OpenAI's automatic prompt cache keeps prefixes for roughly 5-10 minutes of inactivity.
+# OpenAI's automatic prompt cache is best-effort and keeps prefixes for roughly 5-10 minutes
+# of inactivity, so the lower end is assumed: a cache that was already evicted would make
+# the estimate read as cache what was billed as uncached input.
 ANTHROPIC_CACHE_TTL = 300.0
 ANTHROPIC_CACHE_TTL_1H = 3600.0
-OPENAI_CACHE_TTL = 600.0
+OPENAI_CACHE_TTL = 300.0
 OPENAI_CACHE_MIN = 1024  # OpenAI caches prompts of at least 1024 tokens ...
 OPENAI_CACHE_STEP = 128  # ... in 128-token increments
 # Bounds on the calibration ratio (reported / estimated prompt tokens) taken from the

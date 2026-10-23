@@ -28,7 +28,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reported-to-estimated ratio. Without such a request the bound is used as before. Rows
   already in a ledger are not re-priced; the cut-off rows in `docs/results.md` reported their
   input in `message_start` and are unaffected. The earlier request must share the
-  provider and model, and, when there is no session, the first message.
+  provider and model, and, when there is no session, the first message. OpenAI's cache is
+  assumed to last 5 minutes. The estimate assumes the cache hit, so it can undercount input
+  when the provider's cache missed.
 - `reserve = "worst_case"` now also reserves output `n` times for OpenAI Chat `n`, counts
   images sent by URL or file id at 5,000 tokens, and reserves a full context window for
   documents and files sent by URL or file id and for OpenAI Responses stored prompt templates.
