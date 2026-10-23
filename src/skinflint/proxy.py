@@ -92,7 +92,7 @@ class Proxy:
         self.last_message: OrderedDict[tuple[str, str | None], str] = OrderedDict()
         # Per conversation: (arrival ts, reported usage, pre-flight prompt estimate) of the
         # last request the provider reported usage for; see Call.prompt_estimate.
-        self.last_prompt: OrderedDict[tuple[str, str | None], tuple[float, Usage, int]] = (
+        self.last_prompt: OrderedDict[tuple[str | None, ...], tuple[float, Usage, int]] = (
             OrderedDict()
         )
 
@@ -306,8 +306,14 @@ class Proxy:
         # to report) but differs for side requests and subagents in the same session.
         conversation = (session, agent_id or thread or agent) if session else None
         call.conversation = conversation
-        # Requests without a session still share prompt prefixes within one agent and scope.
-        call.cache_key = conversation or ("scope:" + scope, agent)
+        # The previous request whose cache a cut-off request's input estimate reads from: same
+        # conversation, provider and model (caches are per model). Without a session the first
+        # message must identify the conversation too, or unrelated requests that share tools
+        # and system prompt would read each other's cache; with neither, no prior is used.
+        if conversation is not None:
+            call.cache_key = (provider.value, info.model, *conversation)
+        elif thread is not None:
+            call.cache_key = (provider.value, info.model, "scope:" + scope, agent, thread)
         call.est_prompt_tokens = info.est_prompt_tokens
         call.max_prompt_tokens = info.max_prompt_tokens
         try:
@@ -403,7 +409,7 @@ class Proxy:
         remember_bounded(self.last_message, conversation, message_id)
 
     def remember_prompt(
-        self, key: tuple[str, str | None] | None, ts: float, usage: Usage, est_tokens: int
+        self, key: tuple[str | None, ...] | None, ts: float, usage: Usage, est_tokens: int
     ) -> None:
         """Keep the newest reported prompt usage per conversation (by arrival time, so a
         slow request settling late does not replace a newer one)."""
@@ -457,7 +463,7 @@ class Call:
         self.ttft: float | None = None
         self.settled = False
         self.conversation: tuple[str, str] | None = None
-        self.cache_key: tuple[str, str | None] | None = None  # see Proxy.last_prompt
+        self.cache_key: tuple[str | None, ...] | None = None  # see Proxy.last_prompt
         self.est_prompt_tokens = 0  # pre-flight estimate
         self.max_prompt_tokens = 0  # conservative bound, for streams cut off before usage
         proxy.in_flight.add(record_id)

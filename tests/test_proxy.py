@@ -663,6 +663,32 @@ async def test_aborted_stream_prompt_follows_the_conversations_cache(make):
     assert fresh.cost_usd > 3 * cached.cost_usd
 
 
+async def test_aborted_sessionless_stream_reads_only_its_own_conversations_cache(make):
+    # Without a session, requests sharing tools and system prompt used to share one prior:
+    # an unrelated conversation (or another model) was priced as reading its cache.
+    h = await make()
+    usage = {"prompt_tokens": 40_000, "completion_tokens": 100, "total_tokens": 40_100}
+    h.fake.reply(stream(chat_events(usage=usage)))
+    first = [{"role": "user", "content": "alpha " * 40_000}]
+    resp = await h.post("/v1/chat/completions", chat_body(messages=first))
+    await resp.read()
+
+    async def aborted(model: str, messages: list[dict]) -> Record:
+        h.fake.reply(stream(chat_events(model=model, deltas=500), delay=0.01))
+        resp = await h.post("/v1/chat/completions", chat_body(model=model, messages=messages))
+        await read_until(resp, b'"content"', 20)
+        resp.close()
+        await wait_for(lambda: h.fake.active == 0)
+        return (await h.records())[-1]
+
+    other_thread = await aborted("gpt-5.4", [{"role": "user", "content": "beta " * 48_000}])
+    assert other_thread.usage.cache_read == 0 and other_thread.usage.input_tokens > 40_000
+    other_model = await aborted("gpt-5.4-mini", [*first, {"role": "user", "content": "more"}])
+    assert other_model.usage.cache_read == 0 and other_model.usage.input_tokens > 40_000
+    same = await aborted("gpt-5.4", [*first, {"role": "user", "content": "more"}])
+    assert same.usage.cache_read == 40_000 // 128 * 128
+
+
 async def test_heartbeat_keeps_long_streams_reserved(make, monkeypatch):
     monkeypatch.setattr(proxy_mod, "HEARTBEAT_INTERVAL", 0.05)
     h = await make()
