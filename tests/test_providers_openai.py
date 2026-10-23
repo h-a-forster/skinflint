@@ -454,7 +454,7 @@ def test_unfinished_prompt_reads_the_previous_prompt_from_cache():
     assert p.cache_read == 41_050 // 128 * 128
     assert p.input_tokens == p.prompt_tokens - p.cache_read and p.cache_write == 0
     assert p.prompt_tokens == 42_000
-    assert cache_lifetime(Provider.OPENAI, prior) == 600
+    assert cache_lifetime(Provider.OPENAI, prior) == 300  # the low end of 5-10 minutes
     # Below the cache minimum nothing was cached.
     p = estimate_prompt(Provider.OPENAI, 1_200, 1_920, Usage(input_tokens=1_000), 1_000)
     assert p == Usage(input_tokens=1_200)
