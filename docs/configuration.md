@@ -185,7 +185,7 @@ When a request finishes, its reservation is replaced by its real cost. While a r
 flight, the proxy refreshes its ledger row every minute (the row's `duration_ms` holds the time
 elapsed so far), so a request that streams for an hour keeps its reservation for the whole
 hour. A reservation stops counting 15 minutes after its row was last refreshed, so ones left
-by a crashed process stop blocking 15 minutes after the crash, and the next proxy to start
+by a crashed process stop blocking 15 minutes after the crash, and a proxy started after that
 marks them `lost`. Processes running skinflint 0.1.0 or earlier against the same ledger do
 not refresh their rows: their reservations still stop counting 15 minutes after arrival.
 
