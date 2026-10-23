@@ -188,6 +188,10 @@ hour. A reservation stops counting 15 minutes after its row was last refreshed, 
 by a crashed process stop blocking 15 minutes after the crash, and a proxy started after that
 marks them `lost`. Processes running skinflint 0.1.0 or earlier against the same ledger do
 not refresh their rows: their reservations still stop counting 15 minutes after arrival.
+Such processes also apply that arrival-time rule to rows from newer processes: their budget
+checks ignore any request in flight for more than 15 minutes, and on startup they mark it
+`lost`, after which it no longer counts toward budgets until it finishes. Run one version
+per ledger to avoid this.
 
 ### What a refusal looks like
 
