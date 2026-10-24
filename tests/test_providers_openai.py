@@ -7,7 +7,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 
 from skinflint.model import Endpoint, Provider, Usage
 from skinflint.providers import ADAPTERS
-from skinflint.providers.base import BOUND_MEDIA_TOKENS
+from skinflint.providers.base import BOUND_MEDIA_TOKENS, cache_lifetime, estimate_prompt
 from skinflint.providers.openai import OpenAIAdapter, openai_usage
 
 FX = Path(__file__).parent / "fixtures" / "openai"
@@ -445,3 +445,16 @@ def test_parse_request_inputs_by_reference(endpoint, part, image, document):
     plain = adapter.parse_request(endpoint, {"model": "m", key: []})
     assert info.server_context is document
     assert (info.max_prompt_tokens - plain.max_prompt_tokens >= BOUND_MEDIA_TOKENS) is bool(image)
+
+
+def test_unfinished_prompt_reads_the_previous_prompt_from_cache():
+    # OpenAI caches the whole previous prompt (in 128-token steps) once it reaches 1024.
+    prior = Usage(input_tokens=1_000, cache_read=40_050, output_tokens=300)
+    p = estimate_prompt(Provider.OPENAI, 42_000, 67_200, prior, 41_050)
+    assert p.cache_read == 41_050 // 128 * 128
+    assert p.input_tokens == p.prompt_tokens - p.cache_read and p.cache_write == 0
+    assert p.prompt_tokens == 42_000
+    assert cache_lifetime(Provider.OPENAI, prior) == 300  # the low end of 5-10 minutes
+    # Below the cache minimum nothing was cached.
+    p = estimate_prompt(Provider.OPENAI, 1_200, 1_920, Usage(input_tokens=1_000), 1_000)
+    assert p == Usage(input_tokens=1_200)

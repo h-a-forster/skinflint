@@ -263,16 +263,89 @@ def error_message(err: Any) -> str:
     return f"{kind}: {message}" if isinstance(kind, str) and kind else message
 
 
-def estimate_unfinished(usage: Usage, streamed_chars: int, prompt_tokens: int) -> Usage | None:
+# How long a provider keeps a prompt prefix cached after the request that last used it:
+# Anthropic's default breakpoint lifetime is 5 minutes (1 hour when written with ttl "1h");
+# OpenAI's automatic prompt cache is best-effort and keeps prefixes for roughly 5-10 minutes
+# of inactivity, so the lower end is assumed: a cache that was already evicted would make
+# the estimate read as cache what was billed as uncached input.
+ANTHROPIC_CACHE_TTL = 300.0
+ANTHROPIC_CACHE_TTL_1H = 3600.0
+OPENAI_CACHE_TTL = 300.0
+OPENAI_CACHE_MIN = 1024  # OpenAI caches prompts of at least 1024 tokens ...
+OPENAI_CACHE_STEP = 128  # ... in 128-token increments
+# Bounds on the calibration ratio (reported / estimated prompt tokens) taken from the
+# previous request, so one odd request cannot scale an estimate wildly.
+CALIBRATION_RANGE = (0.5, 2.0)
+
+
+def cache_lifetime(provider: Provider, prior: Usage) -> float:
+    """Seconds a prefix cached by a request with usage `prior` stays readable."""
+    if provider is Provider.ANTHROPIC:
+        return ANTHROPIC_CACHE_TTL_1H if prior.cache_write_1h else ANTHROPIC_CACHE_TTL
+    return OPENAI_CACHE_TTL
+
+
+def estimate_prompt(
+    provider: Provider,
+    est_tokens: int,
+    bound_tokens: int,
+    prior: Usage | None = None,
+    prior_est_tokens: int = 0,
+) -> Usage:
+    """The input side of a request whose stream ended before the provider reported usage.
+
+    Without `prior` the whole prompt is the conservative bound, billed as uncached input.
+    `prior` is the usage the provider reported for the previous request of the same
+    conversation, still within its cache lifetime (see cache_lifetime); `prior_est_tokens`
+    is skinflint's pre-flight estimate for that request. Agent loops resend the previous
+    prompt plus a little more, so with `prior`:
+
+    - the prompt size is this request's estimate scaled by the previous request's
+      reported / estimated ratio (clamped to CALIBRATION_RANGE), capped at the bound;
+    - the prefix the previous request left cached is read from the cache: on Anthropic,
+      its cache reads plus writes; on OpenAI, its whole prompt (rounded down to the cache
+      step) once it reaches the cache minimum;
+    - the rest is a cache write on Anthropic when the previous request wrote one (in the
+      lifetime it used), else uncached input.
+    """
+    bound = max(bound_tokens, est_tokens, 0)
+    if prior is None or prior.prompt_tokens <= 0:
+        return Usage(input_tokens=bound)
+    total = bound
+    if est_tokens > 0 and prior_est_tokens > 0:
+        lo, hi = CALIBRATION_RANGE
+        ratio = min(max(prior.prompt_tokens / prior_est_tokens, lo), hi)
+        total = min(math.ceil(est_tokens * ratio), bound)
+    if provider is Provider.ANTHROPIC:
+        prefix = prior.cache_read + prior.cache_write
+    elif prior.prompt_tokens >= OPENAI_CACHE_MIN:
+        prefix = prior.prompt_tokens // OPENAI_CACHE_STEP * OPENAI_CACHE_STEP
+    else:
+        prefix = 0
+    read = min(prefix, total)
+    rest = total - read
+    if provider is Provider.ANTHROPIC and prior.cache_write:
+        if prior.cache_write_1h > prior.cache_write_5m:
+            return Usage(cache_read=read, cache_write_1h=rest)
+        return Usage(cache_read=read, cache_write_5m=rest)
+    return Usage(cache_read=read, input_tokens=rest)
+
+
+def estimate_unfinished(usage: Usage, streamed_chars: int, prompt: Usage) -> Usage | None:
     """Usage for a stream that ended before the provider's final usage: output from the
-    content streamed so far, input from the prompt bound when the stream reported none.
-    None when the reported usage already covers both."""
+    content streamed so far; input from `prompt` (see estimate_prompt) when the stream
+    reported none. None when the reported usage already covers both."""
     output = max(usage.output_tokens, math.ceil(streamed_chars / OUTPUT_CHARS_PER_TOKEN))
-    no_input = usage.prompt_tokens == 0 and prompt_tokens > 0
+    no_input = usage.prompt_tokens == 0 and prompt.prompt_tokens > 0
     if output == usage.output_tokens and not no_input:
         return None
+    if not no_input:
+        return replace(usage, output_tokens=output)
     return replace(
         usage,
         output_tokens=output,
-        input_tokens=prompt_tokens if no_input else usage.input_tokens,
+        input_tokens=prompt.input_tokens,
+        cache_read=prompt.cache_read,
+        cache_write_5m=prompt.cache_write_5m,
+        cache_write_1h=prompt.cache_write_1h,
     )

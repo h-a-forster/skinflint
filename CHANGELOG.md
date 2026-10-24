@@ -14,6 +14,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A request in flight for more than 15 minutes stopped counting its reservation against
+  budgets until it finished, so long parallel requests could overrun a limit, and a second
+  proxy starting on the same ledger marked such requests `lost`. The proxy now refreshes the
+  ledger row of every in-flight request each minute (`duration_ms` holds the elapsed time);
+  a reservation expires 15 minutes after its last refresh, which still frees reservations
+  left by a crashed process. No schema change.
+- The input of a stream cut off before the provider reported usage was priced as the
+  conservative prompt bound, all uncached, overcharging heavily cached agent turns roughly
+  10-15x on input. When an earlier request in the same conversation reported usage within
+  its cache lifetime, the estimate now prices the prefix it left cached as a cache read and
+  the new tail as a cache write or uncached input, sized by that request's
+  reported-to-estimated ratio. Without such a request the bound is used as before. Rows
+  already in a ledger are not re-priced; the cut-off rows in `docs/results.md` reported their
+  input in `message_start` and are unaffected. The earlier request must share the
+  provider and model, and, when there is no session, the first message. OpenAI's cache is
+  assumed to last 5 minutes. The estimate assumes the cache hit, so it can undercount input
+  when the provider's cache missed.
 - `reserve = "worst_case"` now also reserves output `n` times for OpenAI Chat `n`, counts
   images sent by URL or file id at 5,000 tokens, and reserves a full context window for
   documents and files sent by URL or file id and for OpenAI Responses stored prompt templates.

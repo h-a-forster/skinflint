@@ -162,6 +162,25 @@ def test_immediate_rolls_back(store):
     assert store.records() == []
 
 
+def test_heartbeat_keeps_long_pending_rows_live(store):
+    long = store.insert(rec(state=State.PENDING, ts=NOW - 3000, reserved_usd=2.0))
+    stale = store.insert(rec(state=State.PENDING, ts=NOW - 3000, reserved_usd=4.0))
+    done = store.insert(rec(state=State.OK, ts=NOW - 3000, cost_usd=1.0, duration_ms=7))
+    with store.read() as txn:
+        assert txn.spend(None, now=NOW, pending_ttl=900).usd == pytest.approx(1.0)
+    assert store.heartbeat([long, done], NOW - 30) == 1  # settled rows are left alone
+    assert store.get(long).duration_ms == 2_970_000
+    assert store.get(done).duration_ms == 7
+    with store.read() as txn:
+        assert txn.spend(None, now=NOW, pending_ttl=900).usd == pytest.approx(3.0)
+        # It stops counting PENDING_TTL after the last heartbeat (the process died).
+        assert txn.spend(None, now=NOW + 900, pending_ttl=900).usd == pytest.approx(1.0)
+    assert store.mark_lost(NOW - 900) == 1
+    assert store.get(stale).state is State.LOST
+    assert store.get(long).state is State.PENDING
+    assert store.heartbeat([], NOW) == 0
+
+
 def test_mark_lost(store):
     old = store.insert(rec(state=State.PENDING, ts=NOW - 5000))
     new = store.insert(rec(state=State.PENDING, ts=NOW))
