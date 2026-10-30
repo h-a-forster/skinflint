@@ -197,7 +197,9 @@ def post(base: str, n: int) -> tuple[int, dict[str, str], bytes]:
         return e.code, {k.lower(): v for k, v in e.headers.items()}, e.read()
 
 
-def wait_healthy(base: str, proc: subprocess.Popen, timeout: float = 20) -> None:
+# On an oversubscribed machine the server took up to 46 s to answer its health check, so
+# 20 s was not enough. 60 s matches cli()'s timeout.
+def wait_healthy(base: str, proc: subprocess.Popen, timeout: float = 60) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -209,7 +211,7 @@ def wait_healthy(base: str, proc: subprocess.Popen, timeout: float = 20) -> None
         except OSError:
             pass
         time.sleep(0.2)
-    raise AssertionError("skinflint serve did not become healthy")
+    raise AssertionError(f"skinflint serve did not become healthy within {timeout:g} s")
 
 
 def close(a: float, b: float) -> bool:

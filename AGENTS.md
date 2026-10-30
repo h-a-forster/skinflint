@@ -58,19 +58,21 @@ Done:
   cache-aware input), a complete worst-case bound, Windows exclusive bind, `run` setting
   `ENABLE_TOOL_SEARCH=true`, measured results (sections 6-9) and CITATION.cff. All under
   0.1.1 in the changelog, release notes in `docs/release-notes-0.1.1.md`.
-- Checks on 2026-10-30: `pytest` 554 passed, `ruff check` and `ruff format --check` clean,
-  `scripts/smoke.py` passed 5 of 6 local runs (see 2 below).
+- Checks on 2026-10-30: `pytest` 556 passed, `ruff check` and `ruff format --check` clean,
+  `scripts/smoke.py` passed.
+- `scripts/smoke.py` failed once locally ("did not become healthy"): its 20 s health wait was
+  too short on a loaded machine. With busy-loop processes at 3x the CPU count, `serve` took
+  12-46 s to answer the health check (1.6 s idle) and the smoke failed the same way; the
+  wait is now 60 s (as `cli()`), which passed twice under that load
+  (`tests/test_smoke_script.py`).
 
 Open:
 1. Release 0.1.1: merge the branch, tag `v0.1.1`, publish the GitHub release with
    `docs/release-notes-0.1.1.md` (owner action).
-2. `scripts/smoke.py` failed once locally on Windows with "skinflint serve did not become
-   healthy" (20 s health wait) on the first run of a session, then passed five times in a
-   row. Probably a cold start; not reproduced or diagnosed.
-3. `docs/results.md` sections 6-9 cite commit `0f57ee1`, which exists only on the remote
+2. `docs/results.md` sections 6-9 cite commit `0f57ee1`, which exists only on the remote
    branch `claude/fix-review-2026-10-10` (merged into main as a squash in #4). Keep that
    branch, or re-cite the measured build, before pruning old remote branches.
-4. The open questions in README (overhead vs MCP servers and skills, real-session cache
+3. The open questions in README (overhead vs MCP servers and skills, real-session cache
    breaks, a tighter worst-case bound, estimate overshoot at higher parallelism, the
    163-524-token direct/proxied gap, Codex overhead) need new live measurements; each costs
    API or subscription spend.
