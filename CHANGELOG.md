@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## 0.1.1 - 2026-10-30
+
 ### Changed
 
 - `skinflint run` sets `ENABLE_TOOL_SEARCH=true` in the child's environment unless the

@@ -1,6 +1,7 @@
 # Results
 
-Measurements taken through skinflint 0.1.0. They show what the profiler, the cache doctor
+Measurements taken through skinflint 0.1.0 (sections 1-5) and a development build two
+commits after it (sections 6-9). They show what the profiler, the cache doctor
 and the caps report on real agent traffic. Sections 1-5 were taken on 2026-10-09 on Windows;
 sections 6-9 on 2026-10-10 on Linux, with raw data and scripts in
 [`measurements/2026-10-10`](../measurements/2026-10-10) and
