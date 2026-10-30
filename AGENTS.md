@@ -68,8 +68,8 @@ Open:
    healthy" (20 s health wait) on the first run of a session, then passed five times in a
    row. Probably a cold start; not reproduced or diagnosed.
 3. `docs/results.md` sections 6-9 cite commit `0f57ee1`, which exists only on the remote
-   branch `claude/fix-review-2026-10-10` (merged into main as a squash in #4). Keep that branch, or
-   re-cite the measured build, before pruning old remote branches.
+   branch `claude/fix-review-2026-10-10` (merged into main as a squash in #4). Keep that
+   branch, or re-cite the measured build, before pruning old remote branches.
 4. The open questions in README (overhead vs MCP servers and skills, real-session cache
    breaks, a tighter worst-case bound, estimate overshoot at higher parallelism, the
    163-524-token direct/proxied gap, Codex overhead) need new live measurements; each costs
