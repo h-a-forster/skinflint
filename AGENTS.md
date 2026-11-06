@@ -25,19 +25,19 @@ prompt-cache doctor, with a SQLite ledger. Measured results are in
   `measurements/<date>/`. Live measurements spend real money or subscription quota: run them
   only when asked, and keep `MEASURE_STOP_AT` set.
 - The version lives in both `pyproject.toml` and `src/skinflint/__init__.py` (and
-  `CITATION.cff`, `uv.lock`); bump them together. User-visible changes get a line under
-  "Unreleased" in `CHANGELOG.md`.
+  `CITATION.cff`, `uv.lock`); bump them together. User-visible changes get a note in
+  `docs/release-notes-<version>.md`; do not hand-edit `CHANGELOG.md`.
 - Releases are published on GitHub only; users install from the git URL (no PyPI release).
 - Scratch files go in `tmp/` (gitignored). Do not create `.bak` copies; use git.
-- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. The repository
-  is public: change it through pull requests with CI, not direct pushes to main. No personal
-  names, local user paths or machine details in committed files, commits or logs.
+- The repository is public: change it through pull requests with CI (merge commits, never
+  squash: `docs/results.md` cites commits), not direct pushes to main. No personal names, local
+  user paths or machine details in committed files, commits or logs.
 
 ## How to test
 
 ```sh
 uv sync --group dev
-uv run pytest                       # offline, about 1.5 min
+uv run pytest                       # offline, about 30 s
 uv run ruff check .
 uv run ruff format --check .
 uv run python scripts/smoke.py      # end-to-end: real server, fake upstream
@@ -46,33 +46,6 @@ uv run python scripts/bench.py      # proxy overhead (noisy; order of magnitude 
 
 CI (`.github/workflows/ci.yml`) runs lint and tests on Linux, macOS and Windows with Python
 3.11-3.13, then builds the wheel, installs it into a fresh environment and runs the CLI
-against a fake upstream.
+against a fake upstream. Actions are pinned to commit SHAs.
 
-## Status and next steps
-
-Updated: 2026-10-30 (0.1.1 prepared on a branch, not tagged).
-
-Done:
-- 0.1.0 tagged and released on GitHub (2026-10-09).
-- Since then: in-flight reservation refresh, estimated settlement of cut-off streams (with
-  cache-aware input), a complete worst-case bound, Windows exclusive bind, `run` setting
-  `ENABLE_TOOL_SEARCH=true`, measured results (sections 6-9) and CITATION.cff. All under
-  0.1.1 in the changelog, release notes in `docs/release-notes-0.1.1.md`.
-- Checks on 2026-10-30: `pytest` 556 passed, `ruff check` and `ruff format --check` clean,
-  `scripts/smoke.py` passed.
-- `scripts/smoke.py` failed once locally ("did not become healthy"): its 20 s health wait was
-  too short on a loaded machine. With busy-loop processes at 3x the CPU count, `serve` took
-  12-46 s to answer the health check (1.6 s idle) and the smoke failed the same way; the
-  wait is now 60 s (as `cli()`), which passed twice under that load
-  (`tests/test_smoke_script.py`).
-
-Open:
-1. Release 0.1.1: merge the branch, tag `v0.1.1`, publish the GitHub release with
-   `docs/release-notes-0.1.1.md` (owner action).
-2. `docs/results.md` sections 6-9 cite commit `0f57ee1`, which exists only on the remote
-   branch `claude/fix-review-2026-10-10` (merged into main as a squash in #4). Keep that
-   branch, or re-cite the measured build, before pruning old remote branches.
-3. The open questions in README (overhead vs MCP servers and skills, real-session cache
-   breaks, a tighter worst-case bound, estimate overshoot at higher parallelism, the
-   163-524-token direct/proxied gap, Codex overhead) need new live measurements; each costs
-   API or subscription spend.
+Open work is in [backlog.md](backlog.md).

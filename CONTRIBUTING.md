@@ -63,7 +63,7 @@ in the pull request. `tests/test_pricing.py` checks that the table is consistent
 
 ## Pull requests
 
-One change per pull request, with tests and docs. Add a line under "Unreleased" in
-[CHANGELOG.md](CHANGELOG.md) for user-visible changes.
+One change per pull request, with tests and docs. User-visible changes get a note in
+`docs/release-notes-<next version>.md`.
 
 Security issues: see [SECURITY.md](SECURITY.md).

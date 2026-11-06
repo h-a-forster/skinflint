@@ -17,6 +17,9 @@ skinflint run --cap 5 -- claude
 `ENABLE_TOOL_SEARCH=true` unless the variable is already set (any value, including empty,
 is kept). Set `ENABLE_TOOL_SEARCH=false` to opt out.
 
+`--cap` applies to the run's scope, in total. Without `--scope` each run gets a new scope, so
+the cap is per run; with `--scope`, earlier spend in that scope counts against it.
+
 ## Claude Code
 
 ```sh

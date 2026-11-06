@@ -231,7 +231,9 @@ The measurements are small (one machine, one task, Claude Code only) and leave t
 - Costs come from a price table dated in [`prices.toml`](src/skinflint/data/prices.toml).
   Unknown models are priced at the provider's flagship rate and marked estimated.
 - Token attribution within a prompt is an estimate scaled to the exact total.
-- Not metered: batches, embeddings, images, audio, Bedrock and Vertex.
+- Not metered: batches, embeddings, images, audio, legacy completions, Bedrock and Vertex.
+- OpenAI web search fees are not in the ledger: its usage reports no searches. Only
+  `reserve = "worst_case"` holds them.
 - WebSocket transports are refused; Codex falls back to HTTP streaming.
 
 ## How it works

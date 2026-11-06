@@ -22,7 +22,7 @@ Only these are metered; everything else passes through untouched and unrecorded:
 | Provider | Metered |
 |---|---|
 | Anthropic | `POST /v1/messages` |
-| OpenAI | `POST .../chat/completions`, `POST .../responses` |
+| OpenAI | `POST .../chat/completions`, `POST .../responses`, `POST .../responses/compact` |
 
 ## Forwarding
 
@@ -81,6 +81,11 @@ uncached input, which overstates a heavily cached prompt by up to an order of ma
 The cost is marked estimated (`~`). Output the client never saw is not counted: thinking that is not
 streamed as text (omitted or redacted thinking), OpenAI reasoning tokens, and anything the
 provider generated after the connection closed. The same applies when the upstream stream breaks.
+A stream that opens with the provider's own error event, with no usage or content before it,
+generated nothing and costs nothing.
+
+The row keeps the model the client requested, which is what budget rules match, while the cost
+uses the model the response names (an alias can resolve to a dated snapshot).
 
 Costs come from a built-in price table ([`prices.toml`](../src/skinflint/data/prices.toml))
 covering uncached input, 5-minute and 1-hour cache writes, cache reads, output, long-context

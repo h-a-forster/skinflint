@@ -52,7 +52,7 @@ skinflint never stores API keys or `Authorization` headers.
 |---|---|---|
 | `reserve` | `"estimate"` | What an in-flight request holds against budgets. See [Reservations](#reservations). |
 | `unknown_model` | `"max"` | Models without a price: `"max"` prices them at the provider's flagship model and marks the cost as estimated; `"block"` refuses them. |
-| `unmetered` | `"allow"` | `POST` requests to endpoints skinflint cannot meter (batches, embeddings, images). `"block"` refuses them while any budget is configured. Token counting endpoints stay open. |
+| `unmetered` | `"allow"` | `POST` requests to endpoints skinflint cannot meter (batches, embeddings, images). `"block"` refuses them while any budget is configured, along with metered requests whose body cannot be read. Token counting endpoints stay open. |
 
 ## `[anthropic]`
 
@@ -78,8 +78,8 @@ Each `[[budget]]` table is one rule. A request must pass every rule that matches
 | `requests` | - | Request count limit. |
 | `window` | `"day"` | `"hour"`, `"day"`, `"week"` (from Monday), `"month"` or `"total"`. Calendar windows in local time. |
 | `per` | `"all"` | `"all"`: one total for every matching request. `"scope"`: a total per scope. `"session"`: a total per session. `"request"`: each request alone (`usd` only, checked before sending). |
-| `scope` | `"*"` | Glob over scope names. Case-sensitive. |
-| `model` | `"*"` | Glob over model ids, e.g. `"claude-opus-*"`. |
+| `scope` | `"*"` | Glob over scope names (`*`, `?`, `[abc]`, `[!abc]`). Case-sensitive. |
+| `model` | `"*"` | Glob over model ids as the client requested them, e.g. `"claude-opus-*"`. |
 | `action` | `"block"` | `"block"` refuses requests over the limit. `"warn"` only logs. |
 
 At least one of `usd`, `tokens`, `requests` is required.
@@ -117,7 +117,8 @@ per = "scope"
 scope = "ci-*"
 window = "total"
 
-# Refuse any single request that could cost more than $1.
+# Refuse any single request whose reservation is over $1. With reserve = "estimate" that is
+# its estimated prompt; with "worst_case", the most it could cost.
 [[budget]]
 name = "big-request"
 usd = 1
