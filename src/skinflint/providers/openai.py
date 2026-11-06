@@ -224,14 +224,14 @@ class OpenAIAdapter:
     provider = Provider.OPENAI
 
     def endpoint(self, method: str, path: str) -> Endpoint | None:
-        """POST .../chat/completions or .../responses (covers /v1, bare and Codex's
-        /backend-api/codex prefixes)."""
+        """POST .../chat/completions, .../responses or .../responses/compact (covers /v1,
+        bare and Codex's /backend-api/codex prefixes)."""
         if method.upper() != "POST":
             return None
         path = path.split("?", 1)[0].rstrip("/")
         if path.endswith("/chat/completions"):
             return Endpoint.CHAT
-        if path.endswith("/responses"):
+        if path.endswith(("/responses", "/responses/compact")):
             return Endpoint.RESPONSES
         return None
 

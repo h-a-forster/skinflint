@@ -28,9 +28,11 @@ from fakes import (
     error_reply,
     responses_events,
     split,
+    sse,
     stream,
     wait_for,
 )
+from yarl import URL
 
 from skinflint import proxy as proxy_mod
 from skinflint.budget import Budget
@@ -768,6 +770,54 @@ async def test_malformed_json_forwarded_unmetered(h):
     assert await h.records() == []
 
 
+async def test_stream_opening_with_a_provider_error_costs_nothing(h):
+    event = {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}
+    h.fake.reply(stream([sse("error", event)]))
+    resp = await h.messages()
+    await resp.read()
+    (rec,) = await h.records()
+    assert rec.state is State.ERROR and "Overloaded" in rec.error
+    assert rec.cost_usd == 0 and not rec.cost_estimated
+
+
+async def test_responses_compact_is_metered(make):
+    h = await make(budgets=[BudgetRule(name="zero", requests=1)])
+    usage = {"input_tokens": 1000, "output_tokens": 100, "total_tokens": 1100}
+    h.fake.reply(Reply(body=json.dumps({"id": "resp_c", "usage": usage}).encode()))
+    body = {"model": "gpt-5.4", "input": "hi"}
+    assert (await h.post("/v1/responses/compact", body)).status == 200
+    (rec,) = await h.records()
+    assert rec.usage.input_tokens == 1000 and rec.cost_usd > 0
+    assert (await h.post("/v1/responses/compact", body)).status == 429
+
+
+async def test_budget_keeps_counting_when_the_response_names_a_snapshot(make):
+    # OpenAI answers a request for an alias with the dated snapshot it resolved to.
+    h = await make(budgets=[BudgetRule(name="m", usd=0.0001, model="gpt-5.4")])
+    h.fake.reply(stream(chat_events(model="gpt-5.4-2026-03-05")))
+    assert (await (await h.post("/v1/chat/completions", chat_body())).read()) is not None
+    (rec,) = await h.records()
+    assert rec.model == "gpt-5.4" and rec.cost_usd > 0.0001
+    assert (await h.post("/v1/chat/completions", chat_body())).status == 429
+
+
+async def test_lone_surrogate_in_first_message_stays_metered(make):
+    # JSON allows \ud83d on its own (a cut emoji); UTF-8 does not.
+    h = await make(budgets=[BudgetRule(name="zero", usd=0)])
+    raw = json.dumps(msg_body()).replace('"hi"', '"\\ud83d"').encode()
+    assert (await h.post("/v1/messages", raw, ANTHROPIC_HEADERS)).status == 402
+    assert h.fake.requests == []
+
+
+async def test_lone_surrogate_survives_a_body_rewrite(h):
+    raw = json.dumps(chat_body()).replace('"hi"', '"\\ud83d \u00e9"').encode()
+    resp = await h.post("/v1/chat/completions", raw)
+    assert resp.status == 200
+    await resp.read()
+    assert h.fake.requests[0].json()["messages"][0]["content"] == "\ud83d \u00e9"
+    assert h.fake.requests[0].json()["stream_options"] == {"include_usage": True}
+
+
 async def test_non_metered_endpoints_pass_through(h):
     resp = await h.post("/v1/messages/count_tokens", msg_body(), ANTHROPIC_HEADERS)
     assert (await resp.json()) == {"input_tokens": 1234}
@@ -787,6 +837,8 @@ async def test_unmetered_block(make):
     assert resp.status == 200
     resp = await h.client.get("/v1/models")
     assert resp.status == 200
+    resp = await h.post("/v1/messages", b"[1, 2]", ANTHROPIC_HEADERS)  # metered path, no body
+    assert resp.status == 402
     assert [r.path for r in h.fake.requests] == ["/v1/messages/count_tokens", "/v1/models"]
 
 
@@ -981,6 +1033,14 @@ async def test_cache_miss_reason_from_stream_and_json(h):
 
 
 # -- 6. embedded ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not socket.has_ipv6, reason="no IPv6")
+def test_embedded_url_brackets_an_ipv6_host(tmp_path):
+    with embedded(Config(host="::1", port=0, db_path=tmp_path / "e.db")) as base:
+        assert URL(base).host == "::1"  # strict parsers (Node, yarl) reject http://::1:port
+        with urllib.request.urlopen(base + "/_skinflint/health", timeout=5) as r:
+            assert json.loads(r.read())["ok"] is True
 
 
 def test_embedded_runs_and_shuts_down(tmp_path):

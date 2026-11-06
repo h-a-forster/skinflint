@@ -1,7 +1,7 @@
 """Budget rules: admission control against the ledger.
 
 A rule applies to a request when its scope and model globs match (``fnmatch.fnmatchcase``,
-case-sensitive like SQLite GLOB). Rules group requests by ``per``:
+case-sensitive; the ledger query uses the same function). Rules group requests by ``per``:
 
 - ``all``: every matching request in the window;
 - ``scope``: matching requests with this request's scope;

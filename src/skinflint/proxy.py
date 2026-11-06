@@ -206,18 +206,21 @@ class Proxy:
 
         endpoint = adapter.endpoint(request.method, path)
         if endpoint is None:
-            if (
-                self.cfg.unmetered == "block"
-                and self.cfg.budgets
-                and request.method == "POST"
-                and not path.startswith(FREE_POSTS)
-            ):
-                status, headers, err = adapter.error_body(
-                    f'skinflint: {path} is not metered and [limits] unmetered = "block"'
-                )
-                return web.Response(status=status, headers=headers, body=err)
+            if request.method == "POST" and not path.startswith(FREE_POSTS):
+                refusal = self.refuse_unmetered(adapter, path)
+                if refusal is not None:
+                    return refusal
             return await self.passthrough(request, provider, target, body)
         return await self.metered(request, adapter, endpoint, scope, path, target, body)
+
+    def refuse_unmetered(self, adapter: Adapter, path: str) -> web.Response | None:
+        """The refusal for a request that cannot be metered, when the config blocks those."""
+        if self.cfg.unmetered != "block" or not self.cfg.budgets:
+            return None
+        status, headers, err = adapter.error_body(
+            f'skinflint: {path} is not metered and [limits] unmetered = "block"'
+        )
+        return web.Response(status=status, headers=headers, body=err)
 
     async def passthrough(
         self, request: web.Request, provider: Provider, target: str, body: bytes
@@ -255,6 +258,9 @@ class Proxy:
         try:
             data, info, fp, thread = await asyncio.to_thread(prepare, adapter, endpoint, raw)
         except Exception as e:  # noqa: BLE001 - unparseable bodies go upstream untouched
+            refusal = self.refuse_unmetered(adapter, path)
+            if refusal is not None:
+                return refusal
             log.warning("could not parse %s request body (%s); forwarding unmetered", path, e)
             return await self.passthrough(request, provider, target, raw)
 
@@ -551,10 +557,12 @@ class Call:
         )
         usage = tracker.usage
         estimated = None
-        if state is not State.OK and not tracker.finished:
+        chars = getattr(tracker, "streamed_chars", 0)
+        refused = tracker.error is not None and usage.is_empty() and not chars
+        if state is not State.OK and not tracker.finished and not refused:
             # Cut off before the final usage (Anthropic sends output_tokens last; OpenAI sends
-            # nothing until the end): bill what had streamed, marked as an estimate.
-            chars = getattr(tracker, "streamed_chars", 0)
+            # nothing until the end): bill what had streamed, marked as an estimate. A stream
+            # that opens with the provider's error event (`refused`) generated nothing.
             estimated = estimate_unfinished(usage, chars, self.prompt_estimate())
             if estimated is not None:
                 if usage.prompt_tokens:  # the input side is still the provider's report
@@ -608,24 +616,24 @@ class Call:
         self.settled = True
         proxy, rec = self.proxy, self.record
         proxy.in_flight.discard(self.record_id)
+        # The reported model prices the request (an alias can resolve to a dated snapshot), but
+        # the ledger keeps the requested id: budget rules match it, at admission and in spend.
+        priced = model or rec.model
+        rec.model = rec.model or priced
         rec.state = state
         rec.status = status
         rec.usage = usage or Usage()
-        if model:
-            rec.model = model
         rec.upstream_id = upstream_id
         rec.error = error
         rec.cache_miss_reason, rec.cache_missed_tokens = diag
         rec.duration_ms = int((time.time() - rec.ts) * 1000)
         rec.ttft_ms = int(self.ttft * 1000) if self.ttft is not None else None
         try:
-            rec.cost_usd, rec.cost_estimated = proxy.pricing.cost(
-                rec.provider, rec.model, rec.usage
-            )
+            rec.cost_usd, rec.cost_estimated = proxy.pricing.cost(rec.provider, priced, rec.usage)
             rec.cost_estimated = rec.cost_estimated or estimated
         except Exception as e:  # noqa: BLE001
             rec.cost_usd, rec.cost_estimated = 0.0, True
-            log.warning("could not price %s: %s", rec.model, e)
+            log.warning("could not price %s: %s", priced, e)
         rec.reserved_usd = 0.0
         rec.reserved_tokens = 0
         if state is State.OK:
@@ -675,7 +683,8 @@ def prepare(
     messages = data.get("messages")
     thread = None
     if isinstance(messages, list) and messages:
-        digest = hashlib.sha256(segments.canonical(messages[0]).encode()).hexdigest()
+        text = segments.canonical(messages[0])
+        digest = hashlib.sha256(text.encode("utf-8", "surrogatepass")).hexdigest()
         thread = "m:" + digest[:16]
     return data, info, segments.fingerprint(head), thread
 
@@ -695,7 +704,10 @@ def agent_head(endpoint: Endpoint, data: dict[str, Any]) -> dict[str, Any]:
 
 
 def encode(body: dict[str, Any]) -> bytes:
-    return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+    try:
+        return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+    except UnicodeEncodeError:  # a lone surrogate: JSON can only carry it as an escape
+        return json.dumps(body, separators=(",", ":")).encode()
 
 
 async def to_client(aw: Awaitable[T]) -> T:
@@ -939,8 +951,9 @@ def embedded(cfg: Config) -> Iterator[str]:
     if errors:
         thread.join(timeout=10)
         raise errors[0]
+    host = f"[{cfg.host}]" if ":" in cfg.host else cfg.host
     try:
-        yield f"http://{cfg.host}:{holder['port']}"
+        yield f"http://{host}:{holder['port']}"
     finally:
         holder["loop"].call_soon_threadsafe(holder["stop"].set)
         thread.join(timeout=10)

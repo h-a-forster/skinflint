@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 import time
@@ -204,6 +205,8 @@ def check_port(host: str, port: int) -> None:
     try:
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        else:  # as the listener does: connections in TIME_WAIT must not fail a restart
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(addr)
     except OSError as e:
         if e.errno in (errno.EADDRINUSE, errno.EACCES) or getattr(e, "winerror", None) in (
@@ -338,8 +341,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     scope = valid_scope(args.scope or f"run-{datetime.now():%Y%m%d-%H%M%S}")
     rules = list(cfg.budgets)
     if args.cap is not None:
-        if args.cap < 0:
-            raise CliError("--cap must be non-negative", code=2)
+        if not math.isfinite(args.cap) or args.cap < 0:
+            raise CliError("--cap must be a non-negative number", code=2)
         rules = [r for r in rules if r.name != "run cap"]
         rules.append(
             BudgetRule(

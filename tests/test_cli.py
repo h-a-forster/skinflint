@@ -418,6 +418,24 @@ async def test_run_cap_blocks(home, upstream, capsys):
     assert rec.error.endswith("Raise --cap to allow more.")
 
 
+@pytest.mark.parametrize("cap", ["nan", "inf", "-1"])
+def test_run_rejects_a_cap_that_cannot_cap(home, cap, capsys):
+    assert cli.main(["run", "--cap", cap, "--", sys.executable, "-c", CHILD]) == 2
+    assert "--cap" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX TIME_WAIT semantics")
+def test_check_port_ignores_connections_in_time_wait():
+    with socket.create_server(("127.0.0.1", 0)) as listener:
+        port = listener.getsockname()[1]
+        client = socket.create_connection(("127.0.0.1", port))
+        conn, _ = listener.accept()
+        conn.close()  # the server side closes first, so it holds TIME_WAIT on the port
+        client.recv(1)
+        client.close()
+    cli.check_port("127.0.0.1", port)
+
+
 def test_child_env():
     base = "http://127.0.0.1:5000/s/job"
     env = cli.child_env({"PYTHONHOME": sys.base_prefix, "KEEP": "1"}, base)

@@ -402,6 +402,13 @@ def test_globs(store, clock):
     assert admit(b, clock, model="cheap", scope="Work/y").allowed  # case-sensitive
 
 
+def test_negated_glob_counts_the_spend_it_admits(store, clock):
+    b = make(store, clock, BudgetRule("not-haiku", usd=4.0, model="claude-[!h]*"))
+    assert admit(b, clock).allowed
+    assert not admit(b, clock).allowed
+    assert admit(b, clock, model="cheap").allowed
+
+
 def test_warn_never_blocks(store, clock):
     b = make(
         store,

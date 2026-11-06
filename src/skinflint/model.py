@@ -16,7 +16,7 @@ class Endpoint(enum.StrEnum):
 
     MESSAGES = "messages"  # Anthropic POST /v1/messages
     CHAT = "chat.completions"  # OpenAI POST /v1/chat/completions
-    RESPONSES = "responses"  # OpenAI POST /v1/responses
+    RESPONSES = "responses"  # OpenAI POST /v1/responses and /v1/responses/compact
 
 
 class State(enum.StrEnum):
@@ -159,7 +159,7 @@ class Record:
     provider: Provider
     endpoint: Endpoint
     scope: str
-    model: str
+    model: str  # as requested; budget rules match it (priced from the response's model)
     state: State
     id: int | None = None
     session: str | None = None

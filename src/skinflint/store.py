@@ -4,8 +4,9 @@ One connection per Store; several processes may each open their own Store on the
 (WAL mode, busy timeout). Budget checks run inside ``Store.immediate()`` so that a check and
 the insert that follows it are atomic across processes.
 
-Scope and model filters given as globs use SQLite GLOB, which is case-sensitive (matching
-``fnmatch.fnmatchcase`` used by the budget module).
+Scope and model globs are matched by ``fnmatch.fnmatchcase`` in SQL too, so a budget's spend
+query selects exactly the requests its rule applies to (SQLite GLOB negates with ``[^a]``,
+fnmatch with ``[!a]``).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -263,8 +265,12 @@ class Txn:
         heartbeat (see Store.heartbeat)."""
         live = f"(state = 'pending' AND {LAST_SEEN_SQL} >= {float(now - pending_ttl)!r})"
         settled = f"state IN {SETTLED!r}"
-        where = ["scope GLOB ?", "model GLOB ?"]
-        args: list[Any] = [scope_glob, model_glob]
+        where = ["1"]
+        args: list[Any] = []
+        for column, glob in (("scope", scope_glob), ("model", model_glob)):
+            if glob != "*":  # a Python call per row, so skip it for the default
+                where.append(f"fnmatchcase({column}, ?)")
+                args.append(glob)
         if since is not None:
             where.append("ts >= ?")
             args.append(since)
@@ -319,6 +325,7 @@ class Store:
         conn.isolation_level = None
         conn.row_factory = sqlite3.Row
         conn.create_function("local_day", 1, _local_day, deterministic=True)
+        conn.create_function("fnmatchcase", 2, fnmatchcase, deterministic=True)
         self._conn = conn
         try:
             conn.execute("PRAGMA busy_timeout = 5000")
