@@ -355,9 +355,9 @@ def _raw() -> dict:
 
 def test_meta():
     raw = _raw()
-    assert raw["meta"]["as_of"] == "2026-10-09"
+    assert raw["meta"]["as_of"] == "2026-11-06"
     assert all(v.startswith("https://") for k, v in raw["meta"].items() if k != "as_of")
-    assert Pricing.load().as_of == "2026-10-09"
+    assert Pricing.load().as_of == "2026-11-06"
 
 
 def test_every_entry_resolves(pricing):

@@ -127,7 +127,10 @@ def cachebreak() -> list[str]:
     for t in trials:
         sid = t["turn2"].get("session_id") or t["turn1"].get("session_id")
         local[t["cell"]] = local_verdicts(t["cell"], sid) if sid else None
-    write_json("cachebreak-local.json", local)
+    if any(local.values()):  # without the trial ledgers, keep the committed replay
+        write_json("cachebreak-local.json", local)
+    else:
+        local = json.loads((OUT / "cachebreak-local.json").read_text())
     by: dict[str, list[dict]] = {}
     for t in trials:
         by.setdefault(t["breaker"], []).append(t)

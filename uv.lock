@@ -794,7 +794,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.13.2" },
+    { name = "aiohttp", specifier = ">=3.14.4" },
     { name = "backports-zstd", marker = "python_full_version < '3.14'", specifier = ">=1.0" },
 ]
 

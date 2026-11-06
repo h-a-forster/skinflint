@@ -22,7 +22,7 @@
 #   OpenAI "ultrafast" tier (6x on gpt-6-astra / gpt-6.1-sol; tier string unknown)
 
 [meta]
-as_of = "2026-10-09"
+as_of = "2026-11-06"
 anthropic_source = "https://platform.claude.com/docs/en/about-claude/pricing"
 anthropic_release_notes = "https://platform.claude.com/docs/en/release-notes/api"
 openai_source = "https://developers.openai.com/api/docs/pricing"
@@ -176,6 +176,13 @@ output = 10.0
 cache_read = 0.10
 cache_write_5m = 2.5
 long_context = { threshold = 272000, input = 4.0, output = 15.0, cache_read = 0.20, cache_write_5m = 5.0 }
+
+[openai.models."gpt-6.1-terra"]
+input = 1.0
+output = 5.0
+cache_read = 0.05
+cache_write_5m = 1.25
+long_context = { threshold = 272000, input = 2.0, output = 7.5, cache_read = 0.10, cache_write_5m = 2.5 }
 
 [openai.models."gpt-6-sol"]
 input = 2.0
