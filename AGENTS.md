@@ -48,4 +48,4 @@ CI (`.github/workflows/ci.yml`) runs lint and tests on Linux, macOS and Windows 
 3.11-3.13, then builds the wheel, installs it into a fresh environment and runs the CLI
 against a fake upstream. Actions are pinned to commit SHAs.
 
-Open work is in [backlog.md](backlog.md).
+Open work is in `backlog.md`.

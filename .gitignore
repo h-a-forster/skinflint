@@ -12,3 +12,4 @@ tmp/
 *.db
 *.db-wal
 *.db-shm
+backlog.md
