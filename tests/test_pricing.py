@@ -1,4 +1,5 @@
 import tomllib
+from datetime import UTC, datetime, timedelta, timezone
 from importlib import resources
 
 import pytest
@@ -332,6 +333,46 @@ def test_overrides():
     assert haiku.input == 2 and haiku.cache_write_1h == 3
     assert haiku.cache_write_5m == pytest.approx(2.5)
     assert p.lookup(ANT, "claude-haiku-4-5-20251001")[0] is haiku
+
+
+_EST = timezone(timedelta(hours=-5))
+
+
+@pytest.mark.parametrize(
+    ("when", "rates"),
+    [
+        # The last second of the promotion's final day, UTC, given in UTC and in UTC-5.
+        (datetime(2026, 11, 30, 23, 59, 59, tzinfo=UTC), (4.0, 20.0, 0.40, 8.0, 30.0)),
+        (datetime(2026, 11, 30, 18, 59, 59, tzinfo=_EST), (4.0, 20.0, 0.40, 8.0, 30.0)),
+        # The next second: still 30 November in UTC-5, but the promotion is over.
+        (datetime(2026, 12, 1, 0, 0, tzinfo=UTC), (5.0, 30.0, 0.50, 10.0, 45.0)),
+        (datetime(2026, 11, 30, 19, 0, tzinfo=_EST), (5.0, 30.0, 0.50, 10.0, 45.0)),
+    ],
+)
+def test_promotion_ends_on_its_date(when, rates):
+    p = Pricing.load(now=lambda: when)
+    price, exact = p.lookup(OAI, "gpt-5.6-sol")
+    assert exact
+    assert (
+        price.input,
+        price.output,
+        price.cache_read,
+        price.long.input,
+        price.long.output,
+    ) == rates
+    usage = Usage(input_tokens=100_000)
+    assert p.cost(OAI, "gpt-5.6-sol", usage) == (pytest.approx(rates[0] / 10), False)
+    assert p.max_cost(OAI, "gpt-5.6-sol", 100_000, 0, service_tier="default") == pytest.approx(
+        rates[0] * 1.25 / 10
+    )
+    assert any(m == "gpt-5.6-sol" and pr is price for _, m, pr in p.models())
+
+
+def test_override_replaces_promotion():
+    during = datetime(2026, 11, 20, tzinfo=UTC)
+    p = Pricing.load({"gpt-5.6-sol": {"input": 3, "output": 9}}, now=lambda: during)
+    price, _ = p.lookup(OAI, "gpt-5.6-sol")
+    assert (price.input, price.output) == (3, 9)
 
 
 def test_override_from_config_parse():
