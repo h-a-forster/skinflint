@@ -144,8 +144,9 @@ so this also holds across several skinflint processes sharing one ledger.
   rate. A request is admitted while spend plus reservations stays under the cap. Requests
   already in flight still finish, so each one can overshoot the cap by what its reservation
   left out: up to `max_tokens` of output, plus the cache-write premium on its prompt. The
-  measured `worst_case` reservations for Claude Code ($1.57 on Sonnet 5.5, $3.13 on Opus
-  5.5) only fit 128,000 output tokens, so Claude Code 2.1.296 sent either no `max_tokens` or
+  measured `worst_case` reservations for a first Claude Code request ($1.57 on Sonnet 5.5,
+  $3.13 on Opus 5.5; later requests reserve more as the prompt grows) only fit 128,000
+  output tokens, so Claude Code 2.1.296 sent either no `max_tokens` or
   `max_tokens = 128000`. On Claude Opus 5.5 ($20/MTok output) each in-flight request can then
   overshoot by up to $2.56, $5.12 in fast mode, $5.63 in fast mode with `inference_geo: "us"`.
   On Sonnet 5.5 ($10/MTok) it is $1.28. A 100k-token prompt written to the 1-hour cache adds
