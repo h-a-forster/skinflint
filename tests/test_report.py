@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,10 @@ from skinflint.segments import calibrate, segment
 from skinflint.store import Store
 
 FIXTURES = Path(__file__).parent / "fixtures" / "claude_code"
-NOW = time.time()
+# Reports group rows by local day and the fixture rows sit up to 10 minutes before NOW, so keep
+# NOW at least 15 minutes into the local day (just after midnight the rows lie a little ahead).
+_MIDNIGHT = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+NOW = max(time.time(), _MIDNIGHT + 900)
 S1 = "aaaa1111-0000-4000-8000-000000000001"
 S2 = "bbbb2222-0000-4000-8000-000000000002"
 

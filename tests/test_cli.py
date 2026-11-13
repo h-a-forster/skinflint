@@ -3,6 +3,7 @@ import json
 import socket
 import sys
 import time
+from datetime import datetime
 
 import pytest
 from aiohttp import web
@@ -12,7 +13,10 @@ from skinflint.model import Endpoint, Provider, Record, State, Usage
 from skinflint.segments import calibrate, segment
 from skinflint.store import Store
 
-NOW = time.time()
+# Reports group rows by local day and the fixture rows sit up to 10 minutes before NOW, so keep
+# NOW at least 15 minutes into the local day (just after midnight the rows lie a little ahead).
+_MIDNIGHT = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+NOW = max(time.time(), _MIDNIGHT + 900)
 S1 = "aaaa1111-0000-4000-8000-000000000001"
 S2 = "aaaa2222-0000-4000-8000-000000000002"
 

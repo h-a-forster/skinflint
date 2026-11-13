@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
 from importlib import resources
 from typing import Any
 
@@ -27,24 +29,37 @@ class _ProviderData:
     models: dict[str, Price] = field(default_factory=dict)
     aliases: dict[str, str] = field(default_factory=dict)
     model_tiers: dict[str, dict[str, float]] = field(default_factory=dict)
+    # model id -> (last day of the promotion, UTC; promotional price)
+    promos: dict[str, tuple[date, Price]] = field(default_factory=dict)
     fallback: str | None = None
 
 
 class Pricing:
     """Price lookups and cost calculation for every known model."""
 
-    def __init__(self, providers: dict[Provider, _ProviderData], unknown_model: str = "max"):
+    def __init__(
+        self,
+        providers: dict[Provider, _ProviderData],
+        unknown_model: str = "max",
+        now: Callable[[], datetime] | None = None,
+    ):
         if unknown_model not in ("max", "block"):
             raise ValueError(f"unknown_model must be 'max' or 'block', got {unknown_model!r}")
         self._p = providers
         self.unknown_model = unknown_model
+        self._now = now or (lambda: datetime.now(UTC))
         self.as_of: str | None = None
 
     @classmethod
-    def load(cls, overrides: dict[str, dict] | None = None, unknown_model: str = "max") -> Pricing:
+    def load(
+        cls,
+        overrides: dict[str, dict] | None = None,
+        unknown_model: str = "max",
+        now: Callable[[], datetime] | None = None,
+    ) -> Pricing:
         """Bundled prices.toml plus config overrides (model id -> price fields)."""
         text = resources.files("skinflint.data").joinpath("prices.toml").read_text("utf-8")
-        return cls.from_dict(tomllib.loads(text), overrides, unknown_model)
+        return cls.from_dict(tomllib.loads(text), overrides, unknown_model, now)
 
     @classmethod
     def from_dict(
@@ -52,6 +67,7 @@ class Pricing:
         data: dict[str, Any],
         overrides: dict[str, dict] | None = None,
         unknown_model: str = "max",
+        now: Callable[[], datetime] | None = None,
     ) -> Pricing:
         providers: dict[Provider, _ProviderData] = {}
         for provider in Provider:
@@ -66,12 +82,16 @@ class Pricing:
             )
             for model_id, raw in section.get("models", {}).items():
                 pd.models[model_id] = _build(provider, pd, raw)
+                if "promo" in raw:
+                    promo = dict(raw["promo"])
+                    until = date.fromisoformat(promo.pop("until"))
+                    pd.promos[model_id] = (until, _build(provider, pd, promo))
                 for alias in raw.get("aliases", []):
                     pd.aliases[alias] = model_id
                 if "service_tier" in raw:
                     pd.model_tiers[model_id] = dict(raw["service_tier"])
             providers[provider] = pd
-        pricing = cls(providers, unknown_model)
+        pricing = cls(providers, unknown_model, now)
         pricing.as_of = data.get("meta", {}).get("as_of")
         for model_id, raw in (overrides or {}).items():
             pricing._override(model_id, raw)
@@ -91,6 +111,7 @@ class Pricing:
         pd = self._p[provider]
         base = pd.models.get(target) if target else None
         pd.models[target or model_id] = _build(provider, pd, raw, like=base)
+        pd.promos.pop(target or model_id, None)  # the owner's price replaces any promotion
         if "service_tier" in raw:
             pd.model_tiers[target or model_id] = dict(raw["service_tier"])
 
@@ -104,13 +125,20 @@ class Pricing:
         hit = self._match(pd, model)
         if hit is not None:
             model_id, exact = hit
-            return model_id, pd.models[model_id], exact
+            return model_id, self._current(pd, model_id), exact
         if self.unknown_model == "block" or not pd.models:
             return None, None, False
         model_id = pd.fallback
         if model_id not in pd.models:
             model_id = max(pd.models, key=lambda m: pd.models[m].input + pd.models[m].output)
-        return model_id, pd.models[model_id], False
+        return model_id, self._current(pd, model_id), False
+
+    def _current(self, pd: _ProviderData, model_id: str) -> Price:
+        """The price now: the promotion through its last day (UTC), the standard rate after."""
+        promo = pd.promos.get(model_id)
+        if promo is not None and self._now().astimezone(UTC).date() <= promo[0]:
+            return promo[1]
+        return pd.models[model_id]
 
     @staticmethod
     def _match(pd: _ProviderData, model: str) -> tuple[str, bool] | None:
@@ -198,7 +226,7 @@ class Pricing:
         return usd + max(web_searches, 0) * price.web_search_per_1k / 1000
 
     def models(self) -> list[tuple[Provider, str, Price]]:
-        return [(p, m, price) for p, pd in self._p.items() for m, price in pd.models.items()]
+        return [(p, m, self._current(pd, m)) for p, pd in self._p.items() for m in pd.models]
 
     def aliases(self, provider: Provider) -> dict[str, str]:
         return dict(self._p[provider].aliases)

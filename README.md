@@ -4,8 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
-A local proxy for the Anthropic and OpenAI APIs. It puts hard spend caps on coding agents,
-shows where every prompt token goes, and explains each prompt-cache miss.
+A local proxy for the Anthropic and OpenAI APIs. It caps what coding agents spend, shows
+where every prompt token goes, and explains each prompt-cache miss. By default a cap holds
+only each request's prompt, so requests already in flight can carry spend past it (by up to
+9% in [our runs](docs/results.md#7-caps-under-parallel-load)); `reserve = "worst_case"` never
+went over.
 
 Point Claude Code, Codex or any SDK at `http://127.0.0.1:4100`. Requests are forwarded
 as sent, apart from two optional additions that make metering work
@@ -47,7 +50,7 @@ From [measurements](docs/results.md) of Claude Code 2.1.296 and earlier, taken t
 
 ## What it does
 
-- **Hard caps.** Budgets per day, hour, week, month or forever; per scope, per session or per
+- **Spend caps.** Budgets per day, hour, week, month or forever; per scope, per session or per
   request; in dollars, tokens or requests. Over the cap, the request is refused with the
   provider's own error format and `x-should-retry: false`, so clients stop instead of
   retrying. Checks and reservations are atomic, so parallel agents cannot all pass the same

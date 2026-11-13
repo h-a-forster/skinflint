@@ -7,7 +7,7 @@ explains routing, admission, reservations and attribution.
 ## What this is
 
 A local proxy for the Anthropic Messages API and the OpenAI Chat Completions and Responses
-APIs: hard spend caps (atomic across processes), a per-request context profiler and a
+APIs: spend caps (atomic across processes), a per-request context profiler and a
 prompt-cache doctor, with a SQLite ledger. Measured results are in
 [docs/results.md](docs/results.md), raw data in `measurements/`, scripts in `scripts/measure/`.
 

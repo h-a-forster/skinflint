@@ -231,7 +231,9 @@ cache_read = 0.10
 | `fast` | `{ input = ..., output = ... }`: rates when the response reports fast mode. |
 
 Built-in prices are in [`src/skinflint/data/prices.toml`](../src/skinflint/data/prices.toml),
-with the date they were checked. `skinflint prices` lists them.
+with the date they were checked. `skinflint prices` lists them. A promotional price carries
+its end date and gives way to the model's standard rate the next day (UTC); an override of
+that model replaces both.
 
 ## Scopes and sessions
 

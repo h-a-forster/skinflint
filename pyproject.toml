@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "skinflint"
 version = "0.1.1"
-description = "Local proxy for the Anthropic and OpenAI APIs: hard spend caps, per-request context breakdown, and prompt-cache miss diagnosis."
+description = "Local proxy for the Anthropic and OpenAI APIs: spend caps, per-request context breakdown, and prompt-cache miss diagnosis."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
