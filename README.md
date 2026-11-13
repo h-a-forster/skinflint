@@ -27,8 +27,8 @@ From [measurements](docs/results.md) of Claude Code 2.1.296 and earlier, taken t
   ([section 6](docs/results.md#6-fixed-context-overhead-by-version)).
 - **Estimate-mode caps can overshoot; worst-case mode cannot.** With `reserve = "estimate"`,
   spend ended between $0.8906 and $1.0896 on a $1 cap (up to 9.0% over) under parallel agents.
-  `reserve = "worst_case"` never went over, but reserved $1.57 per Sonnet 5.5 request and
-  $3.13 per Opus 5.5 request, so it needs caps of several dollars
+  `reserve = "worst_case"` never went over, but reserved $1.57 for a first Sonnet 5.5 request ($1.97 later in a session) and
+  $3.13 for a first Opus 5.5 request, so it needs caps of several dollars
   ([section 7](docs/results.md#7-caps-under-parallel-load)).
 - **Tool changes are the expensive cache breaks.** Adding one MCP server re-wrote 37,880 tokens
   and made turn 2 cost 19 times the control; editing `CLAUDE.md` or the system prompt broke
@@ -225,8 +225,8 @@ The measurements are small (one machine, one task, Claude Code only) and leave t
   request on Claude Opus 5.5 with 128,000 output tokens ($5.12 in fast mode, $1.28 on Sonnet
   5.5). Measured with 4-8 parallel Claude Code agents on a $1 cap, spend ended between $0.89
   and $1.09. `reserve = "worst_case"` reserves
-  the most each request body allows and refuses earlier: $1.57 per Claude Code request on
-  Sonnet 5.5, $3.13 on Opus 5.5, so it needs caps of several dollars. It cannot bound
+  the most each request body allows and refuses earlier: $1.57 for a first Claude Code request on
+  Sonnet 5.5 (up to $1.97 later in a session), $3.13 on Opus 5.5, so it needs caps of several dollars. It cannot bound
   server-side tool input or a multi-page base64 PDF. For inputs held on the server
   (documents by file id or URL, stored prompts, previous responses and conversations) it
   reserves a full context window. See [reservations](docs/configuration.md#reservations)

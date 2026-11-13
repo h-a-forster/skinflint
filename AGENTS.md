@@ -22,7 +22,10 @@ prompt-cache doctor, with a SQLite ledger. Measured results are in
 - Tests: no network (fake upstream in `tests/fakes.py`), `tmp_path` for every file including
   the ledger, must pass on Windows (`pathlib`, no shell assumptions).
 - Every number in README or docs traces to `docs/results.md`, which traces to
-  `measurements/<date>/`. Live measurements spend real money or subscription quota: run them
+  `measurements/<date>/`. `scripts/measure/analyse.py` rebuilds `summary.md` and
+  `summary.json` there offline (CI diffs them), and `tests/test_docs.py` checks every README
+  and CITATION number against `summary.json` or the price table. Sections 1-5 of
+  `docs/results.md` have no committed raw data and are not checked. Live measurements spend real money or subscription quota: run them
   only when asked, and keep `MEASURE_STOP_AT` set.
 - The version lives in both `pyproject.toml` and `src/skinflint/__init__.py` (and
   `CITATION.cff`, `uv.lock`); bump them together. User-visible changes get a note in

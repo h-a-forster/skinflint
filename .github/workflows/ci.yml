@@ -40,6 +40,15 @@ jobs:
       - name: Test
         run: uv run pytest
 
+      - name: Measurement summaries rebuild from the raw files
+        # summary.md and summary.json are regenerated offline; tests/test_docs.py checks the
+        # README's numbers against summary.json.
+        shell: bash
+        working-directory: scripts/measure
+        run: |
+          uv run python analyse.py > /dev/null
+          git diff --exit-code ../../measurements/
+
   package:
     name: build and smoke test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
