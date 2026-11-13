@@ -2,8 +2,9 @@
 
 Measurements taken through skinflint 0.1.0 (sections 1-5) and a development build two
 commits after it (sections 6-9). They show what the profiler, the cache doctor
-and the caps report on real agent traffic. Sections 1-5 were taken on 2026-10-09 on Windows;
-sections 6-9 on 2026-10-10 on Linux, with raw data and scripts in
+and the caps report on real agent traffic. Sections 1-5 were taken on 2026-10-09 on Windows,
+and their raw data is not committed, so their numbers cannot be regenerated. Sections 6-9 were
+taken on 2026-10-10 on Linux, with raw data and scripts in
 [`measurements/2026-10-10`](../measurements/2026-10-10) and
 [`scripts/measure`](../scripts/measure).
 
@@ -281,9 +282,10 @@ Findings:
   turns produced a few hundred output tokens, not 128,000.
 - It also stops early: a request is refused when its estimate does not fit, so four rounds
   ended 1-11% under the cap.
-- `reserve = "worst_case"` never went over. It reserved $1.57 per Claude Code request on
-  Sonnet 5.5 and $3.13 on Opus 5.5, against an actual $0.01-0.27 per request. A $1 cap
-  therefore refused every first request.
+- `reserve = "worst_case"` never went over. It reserved $1.57 for a first Claude Code request
+  on Sonnet 5.5 (up to $1.97 for a later one in r10, as the prompt grew) and $3.13 on Opus
+  5.5, against an actual $0.01-0.27 per request. A $1 cap therefore refused every first
+  request.
   With a $5 cap, three requests filled the cap with reservations at the start, so three of
   six agents were refused on their first request; the round spent $1.56.
 - The reservations only fit 128,000 output tokens, so Claude Code 2.1.296 sent no

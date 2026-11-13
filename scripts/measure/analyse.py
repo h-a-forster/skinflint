@@ -1,4 +1,5 @@
-"""Summarise the raw measurements in measurements/<date>/ as markdown tables.
+"""Summarise the raw measurements in measurements/<date>/ as markdown tables (summary.md) and
+the figures the README quotes (summary.json, checked by tests/test_docs.py).
 
 For the cache breakers it also replays skinflint's cache doctor on a copy of each trial's
 ledger with the API diagnostics removed, so the local verdict can be compared with the API's.
@@ -10,6 +11,7 @@ That step needs the trial ledgers under $MEASURE_SCRATCH/cachebreak/.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sqlite3
 import statistics
@@ -198,6 +200,90 @@ def reconcile() -> list[str]:
     ]
 
 
+def _prompt(cell: dict) -> int:
+    return (cell["main_profile"] or {}).get("profile", {}).get("total_tokens", 0)
+
+
+def numbers() -> dict[str, str]:
+    """The figures README.md quotes, formatted as it quotes them, from the committed files."""
+    n: dict[str, str] = {}
+    first: dict[tuple, dict] = {}
+    for c in json.loads((OUT / "overhead.json").read_text()):
+        first.setdefault((c["version"], c["mcp"], c["tool_search"]), c)
+    direct = {
+        (c["version"], c["mcp"], c["tool_search"]): c["prompt_tokens_reported"]
+        for c in json.loads((OUT / "direct.json").read_text())
+    }
+    latest = "2.1.296"
+    on, off = first[(latest, "none", "true")], first[(latest, "none", "default")]
+    groups = {g["group"]: g["tokens"] for g in on["main_profile"]["profile"]["groups"]}
+    n["overhead.on.prompt"] = f"{_prompt(on):,}"
+    n["overhead.on.builtin"] = f"{groups['tools: built-in']:,}"
+    n["overhead.off.prompt"] = f"{_prompt(off):,}"
+    n["overhead.direct.prompt"] = f"{direct[(latest, 'none', 'default')]:,}"
+    n["overhead.proxy_vs_direct"] = f"{_prompt(off) / direct[(latest, 'none', 'default')] - 1:.0%}"
+    n["overhead.mcp.on"] = f"{_prompt(first[(latest, '4 servers', 'true')]) - _prompt(on):,}"
+    n["overhead.mcp.off"] = f"{_prompt(first[(latest, '4 servers', 'default')]) - _prompt(off):,}"
+    gaps = [
+        direct[(v, m, "false")] - _prompt(first[(v, m, "default")])
+        for (v, m, t) in first
+        if t == "default"
+    ]
+    n["overhead.direct_gap.min"], n["overhead.direct_gap.max"] = f"{min(gaps):,}", f"{max(gaps):,}"
+
+    rounds = [json.loads(p.read_text())["summary"] for p in OUT.glob("capstress-r*.json")]
+    estimate = [s for s in rounds if s.get("reserve", "estimate") == "estimate"]
+    spend = [s["ledger_total_usd"] for s in estimate]
+    over = max(s["ledger_total_usd"] / s["cap_usd"] - 1 for s in estimate)
+    caps = {s["cap_usd"] for s in estimate}
+    if len(caps) != 1:
+        raise ValueError(f"estimate rounds use several caps: {caps}")
+    n["caps.estimate.rounds"] = str(len(estimate))
+    n["caps.estimate.cap"] = f"{caps.pop():g}"
+    n["caps.estimate.min"], n["caps.estimate.max"] = f"{min(spend):.4f}", f"{max(spend):.4f}"
+    n["caps.estimate.min_2"], n["caps.estimate.max_2"] = f"{min(spend):.2f}", f"{max(spend):.2f}"
+    n["caps.estimate.max_over"], n["caps.estimate.max_over_0"] = f"{over:.1%}", f"{over:.0%}"
+    agents = [s["agents"] for s in estimate]
+    n["caps.estimate.agents_min"], n["caps.estimate.agents_max"] = (
+        str(min(agents)),
+        str(max(agents)),
+    )
+    needs: dict[str, set[str]] = {}
+    for path in OUT.glob("capstress-r*.json"):
+        d = json.loads(path.read_text())
+        if d["summary"].get("reserve") != "worst_case":
+            continue
+        for row in d["ledger"]:
+            hit = re.search(r"this request needs up to \$([0-9]+\.[0-9]+)", row["error"] or "")
+            if hit:
+                needs.setdefault(d["summary"]["model"], set()).add(hit.group(1))
+    for model, values in needs.items():
+        usd = sorted(float(v) for v in values)
+        n[f"caps.worst_case.{model}.min"] = f"{usd[0]:.2f}"
+        n[f"caps.worst_case.{model}.max"] = f"{usd[-1]:.2f}"
+
+    trials = json.loads((OUT / "cachebreak.json").read_text())
+    extra = OUT / "cachebreak-extra.json"
+    if extra.exists():
+        trials += json.loads(extra.read_text())
+
+    def turn2(t: dict) -> float:
+        return float(t["turn2"].get("total_cost_usd") or 0) - float(
+            t["turn1"].get("total_cost_usd") or 0
+        )
+
+    control = statistics.median(turn2(t) for t in trials if t["breaker"] == "control")
+    mcp = min((t for t in trials if t["breaker"] == "mcp"), key=lambda t: t["repeat"])
+    events = (mcp["cache"] or {}).get("events", [])
+    n["cache.mcp.rewritten"] = f"{max(e['cache_write'] for e in events):,}"
+    n["cache.mcp.times_control"] = f"{turn2(mcp) / control:.0f}"
+
+    for line in reconcile():
+        key, _, value = line.removeprefix("- ").partition(": ")
+        n[f"ledger.{key.lower().replace(' ', '_')}"] = value
+    return n
+
+
 def main() -> None:
     parts = [
         f"# Measurements {OUT.name}",
@@ -211,7 +297,9 @@ def main() -> None:
     parts += ["## Streams cut off by a killed client", "", *aborted(), ""]
     if (OUT / "cachebreak.json").exists():
         parts += ["## Cache breakers", "", *cachebreak(), ""]
-    (OUT / "summary.md").write_text("\n".join(parts))
+    (OUT / "summary.md").write_text("\n".join(parts), newline="\n")
+    text = json.dumps(numbers(), indent=1, sort_keys=True) + "\n"
+    (OUT / "summary.json").write_text(text, newline="\n")
     print("\n".join(parts))
 
 
